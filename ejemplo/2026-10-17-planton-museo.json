@@ -1,0 +1,49 @@
+{
+  "salida": "salida",
+  "prefijo": "planton-museo",
+  "sello": "Al aire",
+  "meta": "BOGOTÁ · 17 OCT 2026",
+  "credito": "Foto: Martín Perea / Dial Medio",
+  "semilla": 17,
+  "laminas": [
+    {
+      "tipo": "portada",
+      "foto": "fuentes/planton-6.webp",
+      "titulo": "Con *danza y carteles*, cientos defendieron las obras retiradas del Museo Nacional",
+      "bajada": "La Defensoría calificó el plantón de pacífico. Al anochecer, una tanqueta antidisturbios lo dispersó con agua."
+    },
+    {
+      "foto": "fuentes/planton-10.webp",
+      "rotulo": "Frente al museo",
+      "texto": "Tambores, banderas y carteles en la entrada. La Defensoría contó al menos 500 asistentes."
+    },
+    {
+      "foto": "fuentes/planton-8.webp",
+      "rotulo": "Lo que se retiró",
+      "ancho": 0.44,
+      "texto": "Afiches de Pizarro y Jaramillo, candidatos asesinados en 1990, están entre las piezas retiradas."
+    },
+    {
+      "foto": "fuentes/planton-9.webp",
+      "rotulo": "La versión del Gobierno",
+      "texto": "La ministra de Cultura defiende el retiro de unas 30 piezas: el museo, dice, no debe servir de «instrumento de adoctrinamiento político»."
+    },
+    {
+      "foto": "fuentes/planton-5.webp",
+      "rotulo": "Arte en la calle",
+      "ancho": 0.4,
+      "texto": "Máscaras, disfraces y carteles impresos: la protesta se hizo con humor."
+    },
+    {
+      "foto": "fuentes/planton-4.webp",
+      "rotulo": "Bajo la lluvia",
+      "ancho": 0.42,
+      "texto": "Aun con lluvia, el plantón siguió hasta el anochecer."
+    },
+    {
+      "foto": "fuentes/planton-7.webp",
+      "rotulo": "Al anochecer",
+      "texto": "Una tanqueta de la Unadi (antes Esmad) lanzó agua para despejar la Séptima. La Defensoría la llamó «innecesaria y desproporcionada»."
+    }
+  ]
+}
