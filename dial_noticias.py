@@ -359,11 +359,16 @@ def graficos(cfg, lam, W, H, video=False):
     y_logo = margen * (1.9 if alto_vertical else 0.85)
 
     fondo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    fondo.alpha_composite(degradado_superior(W, H, hasta=0.26 if alto_vertical else 0.2))
-    desde = 0.36 if tipo == "portada" else 0.5
-    if alto_vertical:
-        desde = 0.3 if tipo == "portada" else 0.42
-    fondo.alpha_composite(degradado_inferior(W, H, desde=desde, fuerza=0.9 if tipo == "portada" else 0.84))
+    arriba = lam.get("posicion") == "arriba"  # texto arriba cuando abajo hay algo que no se debe tapar
+    if arriba:
+        fondo.alpha_composite(degradado_superior(W, H, hasta=0.6, fuerza=0.88))
+        fondo.alpha_composite(degradado_inferior(W, H, desde=0.8, fuerza=0.45))
+    else:
+        fondo.alpha_composite(degradado_superior(W, H, hasta=0.26 if alto_vertical else 0.2))
+        desde = 0.36 if tipo == "portada" else 0.5
+        if alto_vertical:
+            desde = 0.3 if tipo == "portada" else 0.42
+        fondo.alpha_composite(degradado_inferior(W, H, desde=desde, fuerza=0.9 if tipo == "portada" else 0.84))
 
     frente = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if video:  # en video la viñeta va en la capa (en foto la pone textura())
@@ -403,9 +408,11 @@ def graficos(cfg, lam, W, H, video=False):
         lt = tt.equilibradas(ancho_txt)
         bj = Rico(lam.get("bajada", ""), (44 if horizontal else 40) * t, 450, color=PAPEL + (235,),
                   interlineado=1.22) if lam.get("bajada") else None
-        lb = bj.lineas(ancho_txt * 0.92) if bj else []
+        lb = bj.equilibradas(ancho_txt * 0.92) if bj else []
         alto_total = tt.alto(lt) + (bj.alto(lb) + 22 * t if bj else 0)
         y = y_fin - alto_total
+        if arriba:
+            y = y_logo + lg.height + 110 * t
         y_sello = y - 34 * t
         sello(d, margen, y_sello, cfg.get("sello", ""), 36 * t, cfg.get("meta"))
         y = tt.dibujar(d, margen - 3 * t, y + 6 * t, lt)
@@ -418,6 +425,8 @@ def graficos(cfg, lam, W, H, video=False):
         tx = Rico(lam["texto"], (52 if horizontal else 48) * t, 500, interlineado=1.16)
         lt = tx.equilibradas(ancho_txt)
         y = y_fin - tx.alto(lt)
+        if arriba:
+            y = y_logo + lg.height + (100 if lam.get("rotulo") else 50) * t
         if lam.get("rotulo"):
             fr = sans(30 * t, 650, 96)
             yr = y - 24 * t
@@ -565,6 +574,12 @@ def main():
     salida = cfg["_base"] / cfg.get("salida", "salida")
     salida.mkdir(parents=True, exist_ok=True)
     hechas = []
+    # formato por defecto: 4:5 para todo; un video solo va en 9:16; "original" conserva la proporción
+    if "formato" not in cfg:
+        solo_video = len(cfg["laminas"]) == 1 and Path(cfg["laminas"][0]["foto"]).suffix.lower() in VIDEOS
+        cfg["formato"] = "9:16" if solo_video else "4:5"
+    if cfg["formato"] in (None, "original"):
+        cfg["formato"] = None
     for n, lam in enumerate(cfg["laminas"], 1):
         if solo and n not in solo:
             continue

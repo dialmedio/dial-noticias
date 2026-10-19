@@ -14,7 +14,7 @@ PASO 1 · INVESTIGAR Y VERIFICAR
 
 PASO 2 · ARMAR LA PIEZA
 - Una lámina por foto o video. La portada lleva la foto más fuerte. Después vienen el desarrollo y el contexto, luego la versión oficial en su propia lámina, y al final el desenlace o lo que sigue. Un video solo va como portada (titular + bajada encima durante todo el video).
-- Formato: el que te diga abajo. Si no digo nada, la proporción original de cada foto o video.
+- Formato: todas las láminas iguales, en 4:5 vertical (un video solo, en 9:16), salvo que yo diga otra cosa abajo. Recorta cada foto sobre lo más importante (con "foco"). Si el texto taparía el cartel o la persona, usa "posicion": "arriba" o "ancho".
 - Textos dentro de los límites de SISTEMA.md. Título de máximo 90 caracteres (70 en 9:16) con 1 a 3 palabras de acento entre *asteriscos*: el acento es la idea central de mi enfoque. Bajada de máximo 120. Rótulos de 1 a 4 palabras. Textos interiores de máximo 110. El sello es "Al aire".
 - Si en una foto aparece alguien que es noticia (funcionario, vocero, entrevistado) y su nombre y cargo están verificados, ponle el rótulo de persona.
 - Criterio: periodístico, balance y no ataque. Mi enfoque se sostiene con hechos, y los calificativos se atribuyen a una fuente ("pacífico, según la Defensoría"). No repitas en el texto de Dial los insultos de los carteles: la foto ya los muestra. No evites a ninguna persona de las fotos.
@@ -31,7 +31,7 @@ PASO 4 · ENTREGAR (en este orden)
 4. Notas breves: dudas, discrepancias entre fuentes, qué dejaste por fuera, y las fuentes con su URL (estas no se publican).
 
 MATERIAL DE HOY
-Formato (original / 4:5 / 9:16):
+Formato (vacío = 4:5 vertical; 9:16 para historias o reels):
 Fecha y lugar:
 Qué pasó:
 Enfoque, qué quiero resaltar:

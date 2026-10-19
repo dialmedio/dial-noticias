@@ -28,7 +28,9 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 
 - Una lámina por foto, en el orden que cuente mejor la historia. **Portada** = la foto más fuerte y representativa. Después, el desarrollo y el contexto (qué se retiró, quién, por qué). Luego, la versión oficial en su propia lámina. **Cierre** = el desenlace o lo que sigue.
 - Si Martín manda una sola foto, se hace solo la portada.
-- **Formato:** por defecto, la proporción original de cada foto (lado corto 1080 px). Si Martín pide "4:5" (o "9:16", "1:1"), se pone `"formato": "4:5"` arriba en el JSON y, si hace falta, `"foco": [x, y]` por lámina (en fracciones de 0 a 1, p. ej. `[0.6, 0.5]`) para que el recorte no corte al protagonista.
+- **Formato: todo en vertical 4:5 (1080 × 1350) y todas las láminas iguales.** Lo decidió Martín el 18 oct 2026: en horizontal se veían muy pequeñas en el celular, y 4:5 es lo más grande que Instagram muestra en el feed. El generador lo aplica solo si el JSON no trae `formato`. Si la pieza es **un solo video**, el defecto es 9:16 (reel / TikTok). Solo se usa otro formato si Martín lo pide (`"formato": "9:16"`, `"1:1"` o `"original"`).
+- **Recorte (lo más importante de cada lámina):** de una foto horizontal, 4:5 se queda con el 45 % del ancho. Por cada foto se decide qué es lo esencial (la persona, el cartel, el gesto, el contraste entre dos grupos) y se pone `"foco": [x, 0.5]`, con `x` = el centro horizontal de eso en fracciones de la foto original (p. ej. `0.57`). Hay que comprobar que el recorte no corte el texto de un cartel ni una cara.
+- **Cuando el texto taparía lo esencial:** si el cartel o la persona están abajo, `"posicion": "arriba"` sube el bloque de texto bajo el logo (con degradado arriba). Si están a la derecha, `"ancho": 0.42` deja el texto en una columna a la izquierda.
 - Límites de texto (en caracteres, con espacios):
   - Título: hasta 90. Lleva 1 a 3 palabras de acento entre asteriscos (`*danza y carteles*`), que salen en serif cursiva terracota. El acento es la idea central del enfoque, no un adorno.
   - Bajada (solo portada): hasta 120. Dos frases: el hecho clave y el desenlace.
@@ -41,7 +43,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 
 - Si Martín manda un video, la lámina lleva el video en `"foto"` (`"foto": "fuentes/clip.mp4"`; también sirven .mov, .m4v, .webm…). Sale el **video completo**, con su audio, con la misma colorización (convertida en LUT y medida sobre varios fotogramas para que no cambie a mitad del video), el mismo grano, la misma viñeta y el mismo diseño encima durante todo el video.
 - Un video solo suele ir con `"tipo": "portada"` (titular + bajada). Si va dentro de un carrusel con fotos, se trata como cualquier otra lámina, en su lugar del orden. Instagram admite carruseles mixtos.
-- Se respeta la proporción original del video (lado corto 1080). Si Martín pide otro formato, se usan `formato` y `foco`, igual que en las fotos.
+- Un video solo sale en 9:16. Dentro de un carrusel sale en 4:5, como las fotos. El `foco` se usa igual que en las fotos.
 - Salida: MP4 H.264 + AAC, ~6 Mbps (unos 45 MB por minuto). Un minuto tarda de 1 a 3 minutos en procesarse.
 - Para revisar, sacar un fotograma del resultado (el generador usa ffmpeg; `ffmpeg -ss 3 -i salida.mp4 -frames:v 1 f.png`) y mirarlo con los mismos criterios de la sección 5.
 
@@ -55,22 +57,27 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
   "meta": "BOGOTÁ · 17 OCT 2026",
   "credito": "Foto: Martín Perea / Dial Medio",
   "semilla": 17,
-  "formato": null,
   "laminas": [
-    {"tipo": "portada", "foto": "fuentes/foto-6.jpg",
+    {"tipo": "portada", "foto": "fuentes/foto-6.jpg", "foco": [0.43, 0.5],
      "titulo": "Con *danza y carteles*, cientos defendieron las obras retiradas del Museo Nacional",
      "bajada": "La Defensoría calificó el plantón de pacífico. Al anochecer, una tanqueta antidisturbios lo dispersó con agua."},
-    {"foto": "fuentes/foto-8.jpg", "rotulo": "Lo que se retiró", "ancho": 0.44,
-     "texto": "Afiches de Pizarro y Jaramillo, candidatos asesinados en 1990, están entre las piezas retiradas."}
+    {"foto": "fuentes/foto-5.jpg", "foco": [0.45, 0.5], "ancho": 0.42, "rotulo": "Arte en la calle",
+     "texto": "Máscaras, disfraces y carteles impresos: la protesta se hizo con humor."},
+    {"foto": "fuentes/foto-4.jpg", "foco": [0.5, 0.5], "posicion": "arriba", "rotulo": "Bajo la lluvia",
+     "texto": "Aun con lluvia, el plantón siguió hasta el anochecer."}
   ]
 }
 ```
 
+El ejemplo completo y aprobado está en `ejemplo/2026-10-17-planton-museo.json`.
+
 Opciones por lámina:
 
-- `ancho`: fracción del ancho para el bloque de texto (por defecto 0.72 en horizontal y todo el ancho en vertical). Bájalo (0.38 a 0.45) cuando el texto tape un cartel o una cara en el centro.
+- `foco`: ver la sección 3. Va en todas las láminas recortadas.
+- `posicion`: `"arriba"` cuando abajo está lo que no se debe tapar.
+- `ancho`: fracción del ancho para el bloque de texto (por defecto, todo el ancho en vertical). Bájalo (0.38 a 0.46) cuando lo importante esté a la derecha.
 - `ajuste`: solo si una foto queda mal, `{"exposicion": 0.3, "calidez": -0.5, "contraste": 0.9, "saturacion": 1.05}`.
-- `formato` y `foco`: ver la sección 3.
+- `formato`: ver la sección 3 (normalmente no se pone).
 - `persona`: rótulo de nombre y cargo para quien aparece en la foto y es noticia (una ministra, un vocero, un entrevistado), como los de La Silla Vacía. Formato: `{"nombre": "Iris Marín", "cargo": "Defensora del Pueblo", "x": 0.55, "y": 0.62}`. `x` e `y` son el punto (en fracciones) adonde apunta el piquito, justo debajo de la barbilla. El rótulo cuelga hacia abajo desde ahí, así que no debe chocar con el bloque de texto. Admite una lista para varias personas. Solo se usa con nombre y cargo verificados; a los manifestantes anónimos no se les pone.
 - `credito`: cambia el crédito de esa lámina (p. ej., `"Foto: Sergio Ruiz / Dial Medio"`).
 
