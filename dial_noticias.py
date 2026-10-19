@@ -6,7 +6,7 @@ Uso:
 Cada lámina respeta la proporción de su foto o video. Lado corto = 1080 px.
 Si "foto" es un video (.mp4, .mov...), sale el video completo con la misma
 colorización (como LUT) y el mismo diseño encima, con su audio.
-Todo el azar (grano) lleva semilla, así que repetir da el mismo resultado.
+Sin grano: Martín prefiere la imagen limpia (el grano se veía como baja calidad).
 """
 import json
 import re
@@ -252,14 +252,16 @@ def degradado_superior(W, H, hasta=0.2, fuerza=0.4):
     return Image.fromarray(capa, "RGBA")
 
 
-def textura(img, semilla, grano=0.022, vineta=0.16):
+def textura(img, semilla, grano=0.0, vineta=0.16):
+    """Viñeta suave. El grano está en 0: Martín lo vio como baja calidad (18 oct 2026)."""
     a = np.asarray(img, dtype=np.float32) / 255.0
     H, W = a.shape[:2]
-    rng = np.random.default_rng(semilla)
-    ruido = rng.normal(0, 1, (H, W)).astype(np.float32)
-    ruido = 0.6 * ruido + 0.4 * _desenfoque(ruido, 1) * 2.2
-    L = _lum(a)[..., None]
-    a = a + grano * ruido[..., None] * (0.35 + 0.65 * 4 * L * (1 - L))
+    if grano:
+        rng = np.random.default_rng(semilla)
+        ruido = rng.normal(0, 1, (H, W)).astype(np.float32)
+        ruido = 0.6 * ruido + 0.4 * _desenfoque(ruido, 1) * 2.2
+        L = _lum(a)[..., None]
+        a = a + grano * ruido[..., None] * (0.35 + 0.65 * 4 * L * (1 - L))
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2) / np.sqrt(2)
     a = a * (1 - vineta * np.clip(r - 0.35, 0, 1) ** 1.5 / 0.65 ** 1.5)[..., None]
@@ -541,7 +543,7 @@ def video(cfg, lam, n, ruta_salida):
         _lut(Path(tmp) / "look.cube", p, aj)
         fondo.save(Path(tmp) / "capa.png")
         filtros += [f"scale={W}:{H}:flags=lanczos", "format=gbrp", "lut3d=file=look.cube",
-                    "unsharp=5:5:0.35", "noise=alls=4:allf=t"]
+                    "unsharp=5:5:0.35"]
         grafo = f"[0:v]{','.join(filtros)}[v];[v][1:v]overlay=0:0:format=auto,format=yuv420p[sal]"
         cmd = [ff, "-hide_banner", "-loglevel", "error", "-y", "-i", str(ruta),
                "-loop", "1", "-i", "capa.png", "-filter_complex", grafo, "-map", "[sal]", "-map", "0:a?",

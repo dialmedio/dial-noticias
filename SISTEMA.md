@@ -41,7 +41,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 
 ## 3b. Videos
 
-- Si Martín manda un video, la lámina lleva el video en `"foto"` (`"foto": "fuentes/clip.mp4"`; también sirven .mov, .m4v, .webm…). Sale el **video completo**, con su audio, con la misma colorización (convertida en LUT y medida sobre varios fotogramas para que no cambie a mitad del video), el mismo grano, la misma viñeta y el mismo diseño encima durante todo el video.
+- Si Martín manda un video, la lámina lleva el video en `"foto"` (`"foto": "fuentes/clip.mp4"`; también sirven .mov, .m4v, .webm…). Sale el **video completo**, con su audio, con la misma colorización (convertida en LUT y medida sobre varios fotogramas para que no cambie a mitad del video), la misma viñeta y el mismo diseño encima durante todo el video.
 - Un video solo suele ir con `"tipo": "portada"` (titular + bajada). Si va dentro de un carrusel con fotos, se trata como cualquier otra lámina, en su lugar del orden. Instagram admite carruseles mixtos.
 - Un video solo sale en 9:16. Dentro de un carrusel sale en 4:5, como las fotos. El `foco` se usa igual que en las fotos.
 - Salida: MP4 H.264 + AAC, ~6 Mbps (unos 45 MB por minuto). Un minuto tarda de 1 a 3 minutos en procesarse.
@@ -81,7 +81,7 @@ Opciones por lámina:
 - `persona`: rótulo de nombre y cargo para quien aparece en la foto y es noticia (una ministra, un vocero, un entrevistado), como los de La Silla Vacía. Formato: `{"nombre": "Iris Marín", "cargo": "Defensora del Pueblo", "x": 0.55, "y": 0.62}`. `x` e `y` son el punto (en fracciones) adonde apunta el piquito, justo debajo de la barbilla. El rótulo cuelga hacia abajo desde ahí, así que no debe chocar con el bloque de texto. Admite una lista para varias personas. Solo se usa con nombre y cargo verificados; a los manifestantes anónimos no se les pone.
 - `credito`: cambia el crédito de esa lámina (p. ej., `"Foto: Sergio Ruiz / Dial Medio"`).
 
-`semilla` = el día del hecho, para que el grano sea reproducible.
+**Sin grano ni ruido:** la imagen va limpia (el grano se veía como baja calidad; lo decidió Martín el 18 oct 2026). Solo hay una viñeta muy suave. `semilla` se conserva por compatibilidad (el día del hecho).
 
 ## 5. Revisar (obligatorio)
 
