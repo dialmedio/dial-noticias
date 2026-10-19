@@ -47,6 +47,17 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 - Salida: MP4 H.264 + AAC, ~6 Mbps (unos 45 MB por minuto). Un minuto tarda de 1 a 3 minutos en procesarse.
 - Para revisar, sacar un fotograma del resultado (el generador usa ffmpeg; `ffmpeg -ss 3 -i salida.mp4 -frames:v 1 f.png`) y mirarlo con los mismos criterios de la sección 5.
 
+## 3c. Láminas sin foto y fotos de terceros
+
+- **Lámina de texto** (`"tipo": "texto"`): fondo carbón con luz cálida y el contenido centrado. Campos: `rotulo`, `titulo` (admite *acento*; `escala` lo ajusta), `dato` + `dato_pie` (una cifra grande en terracota), `texto`, `items` (lista con viñetas terracota), `citas` (`[{"texto", "autor"}]`), `cierre` (remate con filete) y `credito` (las fuentes, abajo). Sirve para análisis, citas de las partes y países o hechos sin foto utilizable. Si el contenido no cabe, el generador avisa: hay que recortar el texto.
+- **Fotos de otros:** solo con licencia libre (Wikimedia Commons: CC0, CC BY, CC BY-SA) o con permiso escrito del autor. Nunca fotos de agencias (AFP, Reuters, AP, EFE, Colprensa) ni capturas de otros medios, aunque se les ponga el crédito.
+  - Hay que pedirle permiso a Martín antes de descargar, con el nombre del archivo, la fuente y el peso.
+  - Hay que verificar el lugar y la fecha de cada foto (la descripción de Commons y su coherencia con lo que reportan los medios) y descartar las dudosas: PNG pequeños con aspecto de captura de pantalla, o fotos sin fecha.
+  - El crédito en la lámina lleva autor, licencia, lugar y fecha: `Foto: Jorge Jaramillo · CC BY-SA 4.0 · París, 17 oct`. Si la foto es de otro día que el hecho del texto, el texto no puede dar a entender que la foto muestra ese hecho.
+  - CC BY-SA obliga a compartir la lámina con la misma licencia: se dice en la descripción ("Las láminas 1 y 2 se comparten bajo CC BY-SA 4.0").
+  - En el .md de la descripción va una tabla con lámina, autor, licencia, lugar, fecha y enlace de Commons.
+  - Para buscar: API de Commons (`list=search`, `srnamespace=6`) y `prop=imageinfo&iiprop=url|size|extmetadata` para la licencia, el autor y la fecha. Se descarga a un ancho razonable con `Special:FilePath/<archivo>?width=2400`.
+
 ## 4. JSON de la noticia
 
 ```json

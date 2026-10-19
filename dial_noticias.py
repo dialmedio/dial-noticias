@@ -474,6 +474,92 @@ def lamina(cfg, lam, n):
     return img.convert("RGB")
 
 
+def lamina_texto(cfg, lam, n):
+    """Lámina sin foto (carbón con luz tungsteno): para datos, citas o análisis.
+
+    Campos: rotulo, titulo (admite *acento*), dato + dato_pie, texto, items [..], citas [{texto, autor}], cierre.
+    """
+    formato = cfg.get("formato") or "4:5"
+    a, b = (float(x) for x in formato.split(":"))
+    W, H = (LADO_CORTO, round(LADO_CORTO * b / a)) if a <= b else (round(LADO_CORTO * a / b), LADO_CORTO)
+    u = min(W, H) / 1080
+    margen = 72 * u
+    ancho = W - 2 * margen
+
+    # fondo carbón con un resplandor cálido arriba a la izquierda (la .luz de la marca)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    r = np.sqrt(((xx - W * 0.2) / (W * 0.95)) ** 2 + ((yy - H * 0.12) / (H * 0.75)) ** 2)
+    luz = np.clip(1 - r, 0, 1) ** 2
+    base = np.array(CARBON, np.float32)[None, None, :] + luz[..., None] * np.array([34, 20, 8], np.float32)
+    img = Image.fromarray(np.clip(base, 0, 255).astype(np.uint8)).convert("RGBA")
+    lg = logo(40 * u)
+    img.alpha_composite(lg, (round(W - margen - lg.width), round(margen * 0.85)))
+
+    # el contenido se dibuja en una capa aparte y luego se centra en el alto disponible
+    capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(capa)
+    y0 = 40 * u
+    y = y0
+    if lam.get("rotulo"):
+        fr = sans(30 * u, 650, 96)
+        d.ellipse([margen, y - 22 * u, margen + 15 * u, y - 7 * u], fill=TERRACOTA_CLARA)
+        d.text((margen + 28 * u, y), lam["rotulo"].upper(), font=fr, fill=PAPEL, anchor="ls")
+        y += 40 * u
+    if lam.get("titulo"):
+        tt = Rico(lam["titulo"], 150 * u * lam.get("escala", 1.0), 600)
+        lt = tt.equilibradas(ancho)
+        y = tt.dibujar(d, margen - 4 * u, y, lt) + 30 * u
+    if lam.get("dato"):
+        fd = sans(170 * u, 600, 88)
+        d.text((margen - 4 * u, y + 130 * u), lam["dato"], font=fd, fill=TERRACOTA_CLARA, anchor="ls")
+        y += 160 * u
+        if lam.get("dato_pie"):
+            pie = Rico(lam["dato_pie"], 34 * u, 450, color=PAPEL + (220,), interlineado=1.22)
+            y = pie.dibujar(d, margen, y, pie.lineas(ancho * 0.85)) + 30 * u
+    if lam.get("texto"):
+        tx = Rico(lam["texto"], 54 * u, 500, color=PAPEL + (240,), interlineado=1.2)
+        y = tx.dibujar(d, margen - 2 * u, y, tx.equilibradas(ancho)) + 34 * u
+    for item in lam.get("items", []):
+        it = Rico(item, 50 * u, 600, interlineado=1.12)
+        li = it.lineas(ancho - 50 * u)
+        cy = y + 50 * u * 0.45
+        d.ellipse([margen, cy - 9 * u, margen + 18 * u, cy + 9 * u], fill=TERRACOTA_CLARA)
+        y = it.dibujar(d, margen + 50 * u, y, li) + 24 * u
+    for cita in lam.get("citas", []):
+        fq = serif(120 * u)
+        y += 16 * u
+        d.text((margen - 6 * u, y + 112 * u), "\u201c", font=fq, fill=TERRACOTA_CLARA, anchor="ls")
+        ct = Rico(cita["texto"], 50 * u, 500, interlineado=1.16)
+        y = ct.dibujar(d, margen + 62 * u, y + 8 * u, ct.lineas(ancho - 62 * u)) + 8 * u
+        if cita.get("autor"):
+            fa = sans(30 * u, 450, 92)
+            d.text((margen + 62 * u, y + 30 * u), cita["autor"], font=fa, fill=PAPEL + (170,), anchor="ls")
+            y += 46 * u
+        y += 44 * u
+    if lam.get("cierre"):  # remate con filete terracota, como la bajada de la portada
+        y += 10 * u
+        ci = Rico(lam["cierre"], 46 * u, 500, color=PAPEL + (235,), interlineado=1.22)
+        lc = ci.equilibradas(ancho - 24 * u)
+        d.rectangle([margen, y + 6 * u, margen + 5 * u, y + ci.alto(lc) - 10 * u], fill=TERRACOTA_CLARA)
+        y = ci.dibujar(d, margen + 24 * u, y, lc) + 20 * u
+
+    # centra el bloque entre el logo y el crédito (sin subir más allá del logo)
+    tope, fondo_y = margen * 0.85 + lg.height + 60 * u, H - margen * 1.3
+    usado = y - y0
+    dy = max(tope, tope + (fondo_y - tope - usado) / 2) - y0
+    img.alpha_composite(capa, (0, round(dy)))
+    d = ImageDraw.Draw(img)
+    y = y + dy
+
+    credito = lam.get("credito", "")
+    if credito:
+        fc = sans(21 * u, 500, 92)
+        d.text((margen, H - margen * 0.75), credito, font=fc, fill=PAPEL + (170,), anchor="ls")
+    if y > H - margen * 1.1:
+        print(f"  ojo: la lámina {n} se pasa de alto ({round(y)} > {round(H - margen * 1.2)}); recorta el texto")
+    return img.convert("RGB")
+
+
 # ---------------------------------------------------------------- video
 
 VIDEOS = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".3gp"}
@@ -590,7 +676,7 @@ def main():
     hechas = []
     # formato por defecto: 4:5 para todo; un video solo va en 9:16; "original" conserva la proporción
     if "formato" not in cfg:
-        solo_video = len(cfg["laminas"]) == 1 and Path(cfg["laminas"][0]["foto"]).suffix.lower() in VIDEOS
+        solo_video = len(cfg["laminas"]) == 1 and Path(cfg["laminas"][0].get("foto", "")).suffix.lower() in VIDEOS
         cfg["formato"] = "9:16" if solo_video else "4:5"
     if cfg["formato"] in (None, "original"):
         cfg["formato"] = None
@@ -598,7 +684,12 @@ def main():
         if solo and n not in solo:
             continue
         nombre = f"{cfg.get('prefijo', 'lamina')}-{n:02d}"
-        if Path(lam["foto"]).suffix.lower() in VIDEOS:
+        if lam.get("tipo") == "texto":
+            im = lamina_texto(cfg, lam, n)
+            ruta = salida / f"{nombre}.jpg"
+            im.save(ruta, quality=94, subsampling=0, optimize=True)
+            tam = im.size
+        elif Path(lam["foto"]).suffix.lower() in VIDEOS:
             ruta = salida / f"{nombre}.mp4"
             tam = video(cfg, lam, n, ruta)
         else:
