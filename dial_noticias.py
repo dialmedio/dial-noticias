@@ -372,6 +372,17 @@ def graficos(cfg, lam, W, H, video=False):
             desde = 0.3 if tipo == "portada" else 0.42
         fondo.alpha_composite(degradado_inferior(W, H, desde=desde, fuerza=0.9 if tipo == "portada" else 0.84))
 
+    if lam.get("ancho") and lam["ancho"] < 0.65:
+        # texto en columna: sombra lateral para que se lea sobre fondos claros
+        x = np.linspace(0, 1, W)[None, :]
+        yv = np.linspace(0, 1, H)[:, None]
+        lado = np.clip(1 - x / (lam["ancho"] + 0.18), 0, 1) ** 1.3
+        vert = np.clip((1 - yv / 0.3) if arriba else (yv - 0.25) / 0.3, 0, 1)
+        g = np.zeros((H, W, 4), np.uint8)
+        g[..., :3] = CARBON
+        g[..., 3] = (0.62 * lado * vert * 255).astype(np.uint8)
+        fondo.alpha_composite(Image.fromarray(g, "RGBA"))
+
     frente = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     if video:  # en video la viñeta va en la capa (en foto la pone textura())
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -406,7 +417,8 @@ def graficos(cfg, lam, W, H, video=False):
             d.text((W - margen, H - margen * 0.62), credito, font=fc, fill=PAPEL + (200,), anchor="rs")
 
     if tipo == "portada":
-        tt = Rico(lam["titulo"], (92 if horizontal else 84) * t, 600)
+        esc_t = lam.get("escala", 1.0)  # titular más pequeño cuando va en una columna angosta
+        tt = Rico(lam["titulo"], (92 if horizontal else 84) * t * esc_t, 600)
         lt = tt.equilibradas(ancho_txt)
         bj = Rico(lam.get("bajada", ""), (44 if horizontal else 40) * t, 450, color=PAPEL + (235,),
                   interlineado=1.22) if lam.get("bajada") else None

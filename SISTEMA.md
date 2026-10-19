@@ -75,7 +75,8 @@ Opciones por lámina:
 
 - `foco`: ver la sección 3. Va en todas las láminas recortadas.
 - `posicion`: `"arriba"` cuando abajo está lo que no se debe tapar.
-- `ancho`: fracción del ancho para el bloque de texto (por defecto, todo el ancho en vertical). Bájalo (0.38 a 0.46) cuando lo importante esté a la derecha.
+- `ancho`: fracción del ancho para el bloque de texto (por defecto, todo el ancho en vertical). Bájalo (0.38 a 0.55) cuando lo importante esté a la derecha; el generador añade solo una sombra lateral para que la columna se lea.
+- `escala`: tamaño del titular de la portada (por defecto 1.0). Con una columna angosta, usar 0.8 para que el titular no se parta en demasiadas líneas (máximo 6).
 - `ajuste`: solo si una foto queda mal, `{"exposicion": 0.3, "calidez": -0.5, "contraste": 0.9, "saturacion": 1.05}`.
 - `formato`: ver la sección 3 (normalmente no se pone).
 - `persona`: rótulo de nombre y cargo para quien aparece en la foto y es noticia (una ministra, un vocero, un entrevistado), como los de La Silla Vacía. Formato: `{"nombre": "Iris Marín", "cargo": "Defensora del Pueblo", "x": 0.55, "y": 0.62}`. `x` e `y` son el punto (en fracciones) adonde apunta el piquito, justo debajo de la barbilla. El rótulo cuelga hacia abajo desde ahí, así que no debe chocar con el bloque de texto. Admite una lista para varias personas. Solo se usa con nombre y cargo verificados; a los manifestantes anónimos no se les pone.
