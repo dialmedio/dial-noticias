@@ -17,6 +17,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 RAIZ = Path(__file__).resolve().parent
+sys.path.insert(0, str(RAIZ))  # para importar al_aire.py también con python -I
 FUENTES = RAIZ / "fuentes"
 
 CARBON = (23, 19, 15)
