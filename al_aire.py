@@ -44,31 +44,61 @@ def ruido_fractal(w, h, semilla, escalas=(6, 24, 90), pesos=(0.5, 0.3, 0.2)):
     return total / sum(pesos)
 
 
+def ruido_suave(w, h, semilla, kx, ky, desenfoque=1.4):
+    """Ruido continuo sin cuadrícula: azar a baja resolución, desenfoque gaussiano y ampliación.
+    kx, ky = tamaño de la mancha en px; si kx > ky salen vetas horizontales (como la madera)."""
+    rng = np.random.default_rng(semilla)
+    pw, ph = max(4, round(w / kx)), max(4, round(h / ky))
+    base = Image.fromarray((rng.random((ph, pw)) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(desenfoque))
+    a = np.asarray(base.resize((w, h), Image.BILINEAR), np.float32) / 255
+    return (a - a.mean()) / (a.std() + 1e-6)  # media 0, desviación 1
+
+
 def tinta(mascara, semilla, fuerza=1.0):
-    """Máscara (L) -> alfa con aspecto de tipo de madera: bordes mordidos y tinta desigual."""
-    m = np.asarray(mascara.filter(ImageFilter.GaussianBlur(1.6)), np.float32) / 255
-    n_borde = ruido_fractal(mascara.width, mascara.height, semilla, (3, 10), (0.6, 0.4))
-    borde = np.clip((m - 0.5 + (n_borde - 0.5) * 0.55 * fuerza) * 5 + 0.5, 0, 1)
-    carga = ruido_fractal(mascara.width, mascara.height, semilla + 1, (5, 30, 140), (0.35, 0.35, 0.3))
-    poros = ruido_fractal(mascara.width, mascara.height, semilla + 2, (2, 4), (0.6, 0.4))
-    a = borde * (0.80 + 0.20 * np.clip((carga - 0.25) / 0.5, 0, 1))
-    a *= np.where(poros > 0.80, 0.55, 1.0) if fuerza > 0.5 else 1.0
+    """Máscara (L) -> alfa con aspecto de tipo de madera impreso a mano (v3, 19 oct 2026).
+
+    - Borde nítido pero irregular: el tipo gastado muerde el contorno (sin halo borroso).
+    - Veta de la madera: la tinta se carga en franjas horizontales largas, no en puntos.
+    - Huecos alargados donde la veta no tomó tinta, más frecuentes en unas zonas que en otras.
+    - El contorno siempre carga más tinta que el centro (el rodillo aprieta en los bordes).
+    """
+    w, h = mascara.size
+    m = np.asarray(mascara, np.float32) / 255
+    # borde: desplaza el umbral con ruido fino y suave, y corta nítido
+    suave = np.asarray(mascara.filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255
+    mordida = 0.6 * ruido_suave(w, h, semilla, 5, 5, 1.2) + 0.4 * ruido_suave(w, h, semilla + 1, 14, 14, 1.2)
+    borde = np.clip((suave - 0.5 + mordida * 0.1 * fuerza) * 16 + 0.5, 0, 1)
+    # interior: veta horizontal modulada por zonas de presión
+    veta = 0.6 * ruido_suave(w, h, semilla + 2, 70, 3, 1.0) + 0.4 * ruido_suave(w, h, semilla + 3, 26, 2, 0.8)
+    zona = ruido_suave(w, h, semilla + 4, 260, 200, 1.5)  # dónde la prensa apretó menos
+    adentro = np.asarray(mascara.filter(ImageFilter.GaussianBlur(9)), np.float32) / 255
+    adentro = np.clip((adentro - 0.55) / 0.45, 0, 1)  # 0 cerca del borde, 1 en el centro del trazo
+    umbral = 1.15 - 0.55 * np.clip(zona * 0.5 + 0.5, 0, 1)  # en zonas flojas aparecen más huecos
+    hueco = np.clip((veta - umbral) * 9, 0, 1) * adentro * fuerza  # canto nítido, como tinta que no tomó
+    # pique: poros sueltos y nítidos de la madera, pocos y repartidos
+    pique = np.clip((ruido_suave(w, h, semilla + 5, 2.6, 2.6, 0.7) - 2.4) * 6, 0, 1) * np.clip(adentro * 2, 0, 1) * fuerza
+    carga = 0.9 + 0.1 * np.clip(veta * 0.35 + 0.5, 0, 1)
+    a = borde * carga * (1 - 0.85 * hueco) * (1 - 0.7 * pique)
     return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
 
 
 def campo(color, semilla, manchas=0.035):
-    """Papel o tinta plana con moteado de impresión (no es grano de cámara)."""
-    n = ruido_fractal(W, H, semilla, (40, 160, 500), (0.4, 0.35, 0.25))
-    a = np.array(color, np.float32)[None, None, :] * (1 + (n[..., None] - 0.5) * manchas * 2)
+    """Tinta plana o papel con moteado de impresión: manchas amplias y una fibra muy leve."""
+    n = 0.85 * ruido_suave(W, H, semilla, 140, 110, 2.0) + 0.15 * ruido_suave(W, H, semilla + 9, 40, 3, 1.0)
+    a = np.array(color, np.float32)[None, None, :] * (1 + n[..., None] * manchas * 0.55)
     return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert("RGBA")
 
 
-def estampar(base, mascara, color, semilla, desfase=(0, 0), multiplicar=False, fuerza=1.0):
+def estampar(base, mascara, color, semilla, desfase=(0, 0), multiplicar=False, fuerza=1.0, opacidad=1.0, debajo_de=None):
     alfa = tinta(mascara, semilla, fuerza)
+    if opacidad < 1:
+        alfa = alfa.point(lambda v: int(v * opacidad))
+    if desfase != (0, 0):
+        alfa = ImageChops.offset(alfa, *desfase)
+    if debajo_de is not None:  # la pasada de abajo solo asoma por fuera de la de arriba
+        alfa = ImageChops.multiply(alfa, ImageChops.invert(debajo_de.filter(ImageFilter.MaxFilter(3))))
     capa = Image.new("RGBA", base.size, color + (0,))
     capa.putalpha(alfa)
-    if desfase != (0, 0):
-        capa = ImageChops.offset(capa, *desfase)
     if multiplicar:
         rgb = Image.composite(Image.new("RGB", base.size, color), Image.new("RGB", base.size, (255, 255, 255)), capa.getchannel("A"))
         out = ImageChops.multiply(base.convert("RGB"), rgb).convert("RGBA")
@@ -154,42 +184,67 @@ def alto_texto(contenido, tam, ancho, inter=1.2):
 
 
 def dibujar_titular(img, x, y, texto, tam, ancho, color=PAPEL, acento="banda", interlineado=0.9):
-    """acento: "banda" (palabras sobre franja brasa, en carbón) o "serif" (cursiva brasa)."""
+    """acento: "banda" (palabras sobre franja brasa, en carbón) o "serif" (cursiva brasa).
+
+    Primero se pintan todas las franjas y después todo el texto: así las letras que bajan
+    (g, j, p, q, y, coma) de la línea de arriba quedan encima de la franja y nunca cortadas."""
     f, fa, lineas, alto, wt, esp = titular(texto, tam, ancho, interlineado, acento)
     d = ImageDraw.Draw(img)
     asc = f.getmetrics()[0]
-    for l in lineas:
-        cx = x
-        base = y + asc
-        if acento == "banda":  # una franja continua por cada tramo de palabras con acento
-            bx = x
-            tramo = None
+
+    extra = tam * 0.09 if acento == "banda" else 0  # aire entre la franja y la palabra vecina
+
+    def franja(x0, x1, base):
+        d.rectangle([x0 - tam * 0.08, base - tam * 0.80, x1 + tam * 0.08, base + tam * 0.16], fill=BRASA)
+
+    def en_franja(t, idx):
+        """Una parte va en la franja si es acento, o si es puntuación pegada a un acento (¿ ? , .)."""
+        txt, a = t[idx]
+        if a:
+            return True
+        vecinos = [t[k][1] for k in (idx - 1, idx + 1) if 0 <= k < len(t)]
+        return acento == "banda" and not any(c.isalnum() for c in txt) and any(vecinos)
+
+    def es_acento(t):
+        return any(a for _, a in t)
+
+    def sep(prev, cur):
+        return esp + (extra if es_acento(prev) != es_acento(cur) else 0)
+
+    if acento == "banda":  # una franja continua por cada tramo de partes con acento
+        for k, l in enumerate(lineas):
+            base = y + asc + k * alto
+            cx, tramo = x, None
             for i, t in enumerate(l):
                 if i:
-                    bx += esp
-                w = wt(t)
-                if t[0][1]:
-                    tramo = [tramo[0] if tramo else bx, bx + w]
-                elif tramo:
-                    d.rectangle([tramo[0] - tam * 0.08, base - tam * 0.80, tramo[1] + tam * 0.08, base + tam * 0.16], fill=BRASA)
-                    tramo = None
-                bx += w
+                    if tramo and not es_acento(t):
+                        franja(*tramo, base)
+                        tramo = None
+                    cx += sep(l[i - 1], t) if not tramo else esp
+                for idx, (txt, a) in enumerate(t):
+                    w = f.getlength(txt)
+                    if en_franja(t, idx):
+                        tramo = [tramo[0] if tramo else cx, cx + w]
+                    elif tramo:
+                        franja(*tramo, base)
+                        tramo = None
+                    cx += w
             if tramo:
-                d.rectangle([tramo[0] - tam * 0.08, base - tam * 0.80, tramo[1] + tam * 0.08, base + tam * 0.16], fill=BRASA)
+                franja(*tramo, base)
+    for k, l in enumerate(lineas):
+        cx, base = x, y + asc + k * alto
         for i, t in enumerate(l):
             if i:
-                cx += esp
-            es_ac = t[0][1]
-            for txt, a in t:
+                cx += sep(l[i - 1], t)
+            for idx, (txt, a) in enumerate(t):
                 if a and acento == "serif":
                     d.text((cx, base), txt, font=fa, fill=BRASA, anchor="ls")
                     cx += fa.getlength(txt)
                 else:
-                    col = CARBON if (a and acento == "banda") else color
+                    col = CARBON if (acento == "banda" and en_franja(t, idx)) else color
                     d.text((cx, base), txt, font=f, fill=col, anchor="ls")
                     cx += f.getlength(txt)
-        y += alto
-    return y
+    return y + len(lineas) * alto
 
 
 def etiqueta(img, x, y, texto, fondo=BRASA, color=CARBON, tam=28, punto=True):
@@ -237,6 +292,43 @@ def cabecera(img, fecha, oscuro=True, sobre_foto=True, logo_papel=False):
         a[~claro & (a[..., 3] > 0), :3] = TERRACOTA
         lg = Image.fromarray(a)
     img.alpha_composite(lg, (W - M - lg.width, T + 2))
+
+
+def rotulo_persona(img, persona):
+    """Rótulo de persona (v2, 19 oct 2026): un punto sobre la persona y una guía que sale hacia el
+    lado, a dos cajas planas como las de la cabecera: el nombre (papel) y el cargo (carbón, mono).
+
+    persona: {"nombre", "cargo", "x", "y", "lado"}. x, y (fracciones) = el punto, sobre el hombro o
+    el pecho, nunca sobre la cara. lado = "izq" o "der": hacia dónde sale el rótulo (por defecto,
+    hacia el lado con más espacio). El rótulo se centra en la altura del punto."""
+    d = ImageDraw.Draw(img)
+    fn, fc = madera(38), dn.mono(19, True)
+    nombre, cargo = persona["nombre"], persona.get("cargo", "").upper()
+    px, py = persona.get("x", 0.5) * W, persona.get("y", 0.5) * H
+    lado = persona.get("lado") or ("der" if px < W / 2 else "izq")
+    guia = 54
+    wn, hn = fn.getlength(nombre) + 30, 52
+    wc, hc = (fc.getlength(cargo) + 24, 32) if cargo else (0, 0)
+    ancho = max(wn, wc)
+    top = py - (hn + hc) / 2
+    if lado == "der":
+        x0 = min(px + guia, W - M - ancho)
+        borde = x0
+    else:
+        x0 = max(px - guia - ancho, M)
+        borde = x0 + ancho
+    # cajas alineadas por el lado de la guía
+    xn = x0 if lado == "der" else borde - wn
+    xc = x0 if lado == "der" else borde - wc
+    d.line([(px, py), (borde, py)], fill=PAPEL, width=3)
+    d.rectangle([xn, top, xn + wn, top + hn], fill=PAPEL)
+    d.text((xn + 15, top + hn - 13), nombre, font=fn, fill=CARBON, anchor="ls")
+    if cargo:
+        d.rectangle([xc, top + hn, xc + wc, top + hn + hc], fill=CARBON)
+        d.text((xc + 12, top + hn + hc - 10), cargo, font=fc, fill=PAPEL, anchor="ls")
+    r = 9
+    d.ellipse([px - r - 3, py - r - 3, px + r + 3, py + r + 3], fill=PAPEL)
+    d.ellipse([px - r, py - r, px + r, py + r], fill=BRASA)
 
 
 def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
@@ -308,7 +400,7 @@ def l_foto(cfg, lam):
     texto(img, M, y, tx, 42, ancho, PAPEL + (240,))
     personas = lam.get("persona") or []
     for p in ([personas] if isinstance(personas, dict) else personas):
-        dn.rotulo_persona(ImageDraw.Draw(img), W, H, 1.0, p)
+        rotulo_persona(img, p)
     pie(img, credito(lam), PAPEL + (190,))
     return img
 
@@ -319,7 +411,8 @@ def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON):
         tam -= 10
     m = Image.new("L", (W, H), 0)
     ImageDraw.Draw(m).text((M - tam * 0.04, y_base), palabra, font=madera(tam), fill=255, anchor="ls")
-    estampar(img, m, sombra, semilla, desfase=(9, 7))  # la segunda pasada, corrida
+    # segunda pasada de otra tinta, con su propia textura y un registro apenas corrido (no es una sombra)
+    estampar(img, m, sombra, semilla + 7, desfase=(7, 6), opacidad=0.85, debajo_de=m)
     estampar(img, m, color, semilla + 1)
 
 
@@ -406,11 +499,52 @@ def l_analisis(cfg, lam, n):
     return img
 
 
+def l_cta(cfg, lam, n):
+    """Cierre (v2, 19 oct 2026): la pregunta para comentar y la invitación a seguir a Dial Medio.
+
+    Campos: pregunta (con *acento*, abierta y sin tomar partido), texto (opcional, una frase que
+    la aterriza), cuenta (por defecto @dialmedio). Siempre es la última lámina del carrusel."""
+    img = campo(CARBON, 40 + n, 0.06)
+    cabecera(img, (lam.get("rotulo") or "Conversemos").upper(), sobre_foto=False)
+    d = ImageDraw.Draw(img)
+    ancho = W - 2 * M - R
+    # signo grande en tipo de madera, en terracota: la misma tinta de las láminas de país
+    m = Image.new("L", (W, H), 0)
+    fq = madera(560)
+    ImageDraw.Draw(m).text((W - M - R + 30, T + 520), "?", font=fq, fill=255, anchor="rs")
+    estampar(img, m, TERRACOTA, 60 + n)
+    pregunta = lam["pregunta"]
+    tam = 104 * lam.get("escala", 1.0)
+    texto_ = lam.get("texto", "")
+    alto = alto_titular(pregunta, tam, ancho) + (28 + alto_texto(texto_, 40, ancho) if texto_ else 0)
+    y_pie = H - B - 150
+    y = max(T + 300, y_pie - 70 - alto)
+    etiqueta(img, M, y - 82, "TU OPINIÓN", fondo=PAPEL, punto=False, tam=26)
+    y = dibujar_titular(img, M, y, pregunta, tam, ancho)
+    if texto_:
+        texto(img, M, y + 28, texto_, 40, ancho, PAPEL + (225,))
+    # acciones: tres cajas, la primera es la que más importa
+    x = M
+    for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
+        fin = etiqueta(img, x, y_pie, palabra, fondo=BRASA if k == 0 else PAPEL, color=CARBON, tam=26, punto=k == 0)
+        x = fin + 10
+    # firma: el logotipo grande, el lema de Dial Medio y la cuenta
+    lg = dn.logo(64)
+    img.alpha_composite(lg, (M, round(y_pie + 84)))
+    d = ImageDraw.Draw(img)
+    cuenta = lam.get("cuenta", "@dialmedio")
+    d.text((W - M - R, y_pie + 84 + 46), cuenta, font=dn.mono(28, True), fill=PAPEL, anchor="rs")
+    d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=(224, 105, 74), anchor="ls")
+    return img
+
+
 def estilo_de(lam):
     if lam.get("estilo"):
         return lam["estilo"]
     if lam.get("tipo") == "portada":
         return "portada"
+    if lam.get("tipo") == "cta" or lam.get("pregunta"):
+        return "cta"
     if lam.get("tipo") == "texto":
         if lam.get("semitono"):
             return "analisis"
@@ -418,7 +552,7 @@ def estilo_de(lam):
     return "foto"
 
 
-ESTILOS = {"portada": l_portada, "foto": l_foto, "pais": l_pais, "citas": l_citas, "analisis": l_analisis}
+ESTILOS = {"portada": l_portada, "foto": l_foto, "pais": l_pais, "citas": l_citas, "analisis": l_analisis, "cta": l_cta}
 
 
 def lamina(cfg, lam, n):

@@ -13,7 +13,7 @@ PASO 1 · INVESTIGAR Y VERIFICAR
 - Busca siempre la versión oficial o de la contraparte, con una cita textual verificada.
 
 PASO 2 · ARMAR LA PIEZA
-- Una lámina por foto o video. La portada lleva la foto más fuerte. Después vienen el desarrollo y el contexto, luego la versión oficial en su propia lámina, y al final el desenlace o lo que sigue. Un video solo va como portada (titular + bajada encima durante todo el video).
+- Una lámina por foto o video. La portada lleva la foto más fuerte. Después vienen el desarrollo y el contexto, luego la versión oficial en su propia lámina, luego el desenlace o lo que sigue, y siempre una última lámina de cierre (estilo "cta") con una pregunta abierta sobre el tema para que comenten, sin tomar partido. Un video solo va como portada (titular + bajada encima durante todo el video).
 - Formato: todas las láminas iguales, en 4:5 vertical (un video solo, en 9:16), salvo que yo diga otra cosa abajo. Recorta cada foto sobre lo más importante (con "foco"). Si el texto taparía el cartel o la persona, usa "posicion": "arriba" o "ancho".
 - Textos dentro de los límites de SISTEMA.md. Título de máximo 90 caracteres (70 en 9:16) con 1 a 3 palabras de acento entre *asteriscos*: el acento es la idea central de mi enfoque. Bajada de máximo 120. Rótulos de 1 a 4 palabras. Textos interiores de máximo 110. El sello es "Al aire". Diseño: Al Aire v2 (lo dibuja el generador; tú solo eliges estilo, foco, ancho y textos).
 - Si en una foto aparece alguien que es noticia (funcionario, vocero, entrevistado) y su nombre y cargo están verificados, ponle el rótulo de persona.
