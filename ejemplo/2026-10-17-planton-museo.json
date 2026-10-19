@@ -8,13 +8,15 @@
   "laminas": [
     {
       "tipo": "portada",
-      "foto": "fuentes/planton-6.webp",
+      "foto": "fuentes/planton-5.webp",
       "titulo": "Con *danza y carteles*, cientos defendieron las obras retiradas del Museo Nacional",
       "bajada": "La Defensoría calificó el plantón de pacífico. Al anochecer, una tanqueta antidisturbios lo dispersó con agua.",
       "foco": [
-        0.43,
+        0.44,
         0.5
-      ]
+      ],
+      "ancho": 0.45,
+      "escala": 0.74
     },
     {
       "foto": "fuentes/planton-10.webp",
@@ -44,14 +46,13 @@
       ]
     },
     {
-      "foto": "fuentes/planton-5.webp",
+      "foto": "fuentes/planton-6.webp",
       "rotulo": "Arte en la calle",
-      "texto": "Máscaras, disfraces y carteles impresos: la protesta se hizo con humor.",
+      "texto": "Danza, abanicos y disfraces: la protesta se hizo con arte y humor.",
       "foco": [
-        0.45,
+        0.43,
         0.5
-      ],
-      "ancho": 0.42
+      ]
     },
     {
       "foto": "fuentes/planton-4.webp",

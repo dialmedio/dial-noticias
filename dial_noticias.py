@@ -635,8 +635,12 @@ def video(cfg, lam, n, ruta_salida):
     aj = dict(AJUSTE_BASE, **(lam.get("ajuste") or {}))
     p = estimar(mosaico, aj)
 
-    fondo, frente = graficos(cfg, lam, W, H, video=True)
-    fondo.alpha_composite(frente)
+    if cfg.get("estilo", "v2") == "v2":
+        import al_aire
+        fondo = al_aire.capa_video(cfg, lam, W, H)
+    else:
+        fondo, frente = graficos(cfg, lam, W, H, video=True)
+        fondo.alpha_composite(frente)
     with tempfile.TemporaryDirectory() as tmp:
         _lut(Path(tmp) / "look.cube", p, aj)
         fondo.save(Path(tmp) / "capa.png")
@@ -684,12 +688,20 @@ def main():
         if solo and n not in solo:
             continue
         nombre = f"{cfg.get('prefijo', 'lamina')}-{n:02d}"
-        if lam.get("tipo") == "texto":
+        es_video = Path(lam.get("foto", "")).suffix.lower() in VIDEOS
+        if cfg.get("estilo", "v2") == "v2" and not es_video:
+            # estilo Al Aire v2 (por defecto desde el 18 oct 2026); "estilo": "v1" vuelve al anterior
+            import al_aire
+            im = al_aire.lamina(cfg, lam, n)
+            ruta = salida / f"{nombre}.jpg"
+            im.save(ruta, quality=94, subsampling=0, optimize=True)
+            tam = im.size
+        elif lam.get("tipo") == "texto":
             im = lamina_texto(cfg, lam, n)
             ruta = salida / f"{nombre}.jpg"
             im.save(ruta, quality=94, subsampling=0, optimize=True)
             tam = im.size
-        elif Path(lam["foto"]).suffix.lower() in VIDEOS:
+        elif es_video:
             ruta = salida / f"{nombre}.mp4"
             tam = video(cfg, lam, n, ruta)
         else:

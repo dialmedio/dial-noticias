@@ -9,6 +9,20 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 - **En el sandbox:** ejecutar `pip install pillow numpy` si falta algo y trabajar con rutas relativas: el JSON va junto a las fotos (o con rutas relativas a ellas), y la salida por defecto es `salida/` junto al JSON. Los videos usan ffmpeg: si no está instalado, el generador instala `imageio-ffmpeg` por su cuenta.
 - Uso: `python dial_noticias.py <noticia>.json [--solo=2,4]`. Genera `<prefijo>-NN.jpg` (o `.mp4` si la lámina es un video) y `<prefijo>.zip` con todo.
 
+## Diseño: Al Aire v2 (vigente desde el 18 oct 2026)
+
+Lo aprobó Martín con el carrusel "Protestas en el mundo". Referentes: Mutante (campos planos, titulares condensados, collage en semitono, etiquetas en caja) y La Linterna de Cali (tipos de madera, tinta de prensa). Lo dibuja `al_aire.py`; `dial_noticias.py` lo usa por defecto (`"estilo": "v1"` vuelve al diseño anterior).
+
+- **Cabecera fija** en todas las láminas: caja brasa con el punto "en vivo" y `AL AIRE` en mono, luego `meta` (lugar · fecha) en caja carbón, y el logo arriba a la derecha.
+- **Color:** la brasa `#E58A3A` es el color de Al Aire (el manual ya la reserva para lo "en vivo"). Terracota, carbón y papel, como siempre. No se agregan colores.
+- **Titulares:** Instrument Sans 700 al 75 % de ancho (condensada), caja mixta. El acento (`*así*`) va en carbón sobre una franja brasa. Las líneas se equilibran solas.
+- **Rótulos:** IBM Plex Mono en mayúsculas dentro de una caja (papel sobre fotos, carbón sobre terracota). Créditos y fuentes, en mono abajo.
+- **Láminas sin foto** (`"tipo": "texto"`), según `estilo` (si no se pone, se deduce):
+  - `pais`: campo terracota con el `titulo` en tipo de madera (papel, con la pasada corrida en carbón), `rotulo`, `texto`, `items` numerados y `citas` en serif. Para países o lugares sin foto libre.
+  - `citas`: papel limpio, sin textura en las letras. Comillas grandes en terracota, la cita en Sans 600 y el autor en mono. Es la lámina de "la versión del Gobierno".
+  - `analisis`: carbón con una foto en semitono brasa (`"semitono": "fuentes/x.jpg"`, `"foco_semitono": [x, y]`) con borde rasgado, el `titulo` con franja, `items` numerados en mono y `cierre` con filete. Para la lámina de análisis o cierre.
+- **Texturas:** solo de impresión y evidentes (tinta en los tipos de madera, moteado en los campos planos). Nunca grano sobre las fotos ni en el texto corrido.
+
 ## 1. Investigar y verificar (antes de escribir una sola lámina)
 
 1. Fijar la fecha real del hecho. "Ayer" u "hoy" se calculan con la fecha actual. Si las fotos pueden ser de días distintos, decirlo en las notas.
@@ -32,7 +46,8 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 - **Recorte (lo más importante de cada lámina):** de una foto horizontal, 4:5 se queda con el 45 % del ancho. Por cada foto se decide qué es lo esencial (la persona, el cartel, el gesto, el contraste entre dos grupos) y se pone `"foco": [x, 0.5]`, con `x` = el centro horizontal de eso en fracciones de la foto original (p. ej. `0.57`). Hay que comprobar que el recorte no corte el texto de un cartel ni una cara.
 - **Cuando el texto taparía lo esencial:** si el cartel o la persona están abajo, `"posicion": "arriba"` sube el bloque de texto bajo el logo (con degradado arriba). Si están a la derecha, `"ancho": 0.42` deja el texto en una columna a la izquierda.
 - Límites de texto (en caracteres, con espacios):
-  - Título: hasta 90. Lleva 1 a 3 palabras de acento entre asteriscos (`*danza y carteles*`), que salen en serif cursiva terracota. El acento es la idea central del enfoque, no un adorno.
+  - Título: hasta 90. Lleva 1 a 3 palabras de acento entre asteriscos (`*danza y carteles*`), que salen sobre la franja brasa. El acento es la idea central del enfoque, no un adorno.
+  - Titular interior (opcional, `"titulo"` en láminas con foto): de 2 a 5 palabras ("550.000 en la calle", "Agua a presión"). Le da a cada lámina su propia idea; el `texto` la desarrolla.
   - Bajada (solo portada): hasta 120. Dos frases: el hecho clave y el desenlace.
   - Rótulo (interiores): de 1 a 4 palabras, sin punto ("Frente al museo", "La versión del Gobierno", "Al anochecer").
   - Texto interior: hasta 110. Con `"ancho"` reducido, hasta 80.
@@ -49,7 +64,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 
 ## 3c. Láminas sin foto y fotos de terceros
 
-- **Lámina de texto** (`"tipo": "texto"`): fondo carbón con luz cálida y el contenido centrado. Campos: `rotulo`, `titulo` (admite *acento*; `escala` lo ajusta), `dato` + `dato_pie` (una cifra grande en terracota), `texto`, `items` (lista con viñetas terracota), `citas` (`[{"texto", "autor"}]`), `cierre` (remate con filete) y `credito` (las fuentes, abajo). Sirve para análisis, citas de las partes y países o hechos sin foto utilizable. Si el contenido no cabe, el generador avisa: hay que recortar el texto.
+- **Láminas sin foto:** ver "Diseño: Al Aire v2" (estilos `pais`, `citas` y `analisis`). Hay que mantener el texto corto: si algo se sale del cuadro, se recorta el texto, no la letra.
 - **Fotos de otros:** solo con licencia libre (Wikimedia Commons: CC0, CC BY, CC BY-SA) o con permiso escrito del autor. Nunca fotos de agencias (AFP, Reuters, AP, EFE, Colprensa) ni capturas de otros medios, aunque se les ponga el crédito.
   - Hay que pedirle permiso a Martín antes de descargar, con el nombre del archivo, la fuente y el peso.
   - Hay que verificar el lugar y la fecha de cada foto (la descripción de Commons y su coherencia con lo que reportan los medios) y descartar las dudosas: PNG pequeños con aspecto de captura de pantalla, o fotos sin fecha.
@@ -80,7 +95,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 }
 ```
 
-El ejemplo completo y aprobado está en `ejemplo/2026-10-17-planton-museo.json`.
+Ejemplos aprobados: `ejemplo/2026-10-18-protestas-mundo.json` (carrusel completo v2, con los tres estilos sin foto) y `ejemplo/2026-10-17-planton-museo.json`.
 
 Opciones por lámina:
 

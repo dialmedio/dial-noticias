@@ -5,6 +5,7 @@ Kit de Dial Medio para publicar noticias del día: a partir de fotos o videos, g
 - `SISTEMA.md`: el proceso completo (investigación, criterio editorial, formato, entrega). Es la fuente de verdad.
 - `PROMPT.md`: el prompt que se pega en una conversación nueva junto con las fotos o videos.
 - `dial_noticias.py`: el generador (Python + Pillow + numpy; ffmpeg para videos).
+- `al_aire.py`: el diseño Al Aire v2 (cabecera, titulares condensados con franja brasa, láminas sin foto).
 - `ejemplo/`: el JSON del plantón del Museo Nacional (17 oct 2026). Las fotos no están incluidas.
 
 ```bash

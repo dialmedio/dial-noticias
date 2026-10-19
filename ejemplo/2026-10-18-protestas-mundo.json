@@ -1,0 +1,155 @@
+{
+  "salida": "salida",
+  "prefijo": "protestas-mundo-v2",
+  "meta": "EL MUNDO · 18 OCT 2026",
+  "laminas": [
+    {
+      "tipo": "portada",
+      "foto": "fuentes/francia-pancarta.jpg",
+      "foco": [
+        0.5,
+        0.5
+      ],
+      "credito": "Foto: Jorge Jaramillo · CC BY-SA 4.0 · París, 17 oct",
+      "titulo": "De París a Bogotá: *la misma semana* en la calle. ¿Casualidad?",
+      "bajada": "Sin convocatoria común, pero con causas compartidas: el costo de vivir, la vivienda y los recortes a lo público."
+    },
+    {
+      "foto": "fuentes/francia-carteles.jpg",
+      "foco": [
+        0.5,
+        0.5
+      ],
+      "meta": "PARÍS · 17 OCT 2026",
+      "credito": "Foto: Jorge Jaramillo · CC BY-SA 4.0",
+      "rotulo": "Francia · el epicentro",
+      "titulo": "550.000 en la calle",
+      "texto": "Empezó con estudiantes contra recortes escolares. La cifra es del Gobierno; los sindicatos dicen que fueron más."
+    },
+    {
+      "foto": "fuentes/espana-sol.jpg",
+      "foco": [
+        0.45,
+        0.5
+      ],
+      "meta": "MADRID · 30 SEP 2026",
+      "credito": "Foto: Zarateman · CC0",
+      "rotulo": "España y Portugal · la vivienda",
+      "titulo": "Acampar por un techo",
+      "texto": "Acampadas en Madrid y Lisboa. En Lisboa, los precios de la vivienda se duplicaron desde 2017."
+    },
+    {
+      "estilo": "pais",
+      "titulo": "Italia",
+      "meta": "17 OCT 2026",
+      "rotulo": "El bolsillo",
+      "texto": "Estudiantes en el «No Meloni Day» y marchas contra el costo de vida. Choques en Milán y unos 50 detenidos.",
+      "citas": [
+        {
+          "texto": "Manifestarse es un derecho. Prender fuego a nuestras ciudades no lo es.",
+          "autor": "Giorgia Meloni, primera ministra"
+        }
+      ],
+      "credito": "Fuentes: Il Post · Al Jazeera · LaPresse"
+    },
+    {
+      "foto": "fuentes/albania-calle.jpg",
+      "foco": [
+        0.42,
+        0.5
+      ],
+      "meta": "TIRANA · OCT 2026",
+      "credito": "Foto: Vyolltsa · CC0",
+      "rotulo": "Albania · los estudiantes",
+      "titulo": "Matrículas, becas, empleo",
+      "texto": "Empezó en las universidades de Tirana. Ahora también se protesta por el desempleo juvenil."
+    },
+    {
+      "foto": "fuentes/chile-marcha.jpg",
+      "foco": [
+        0.66,
+        0.5
+      ],
+      "meta": "SANTIAGO · 1 OCT 2026",
+      "credito": "Foto: Matías Villacura · CC BY-SA 4.0",
+      "rotulo": "Chile · siete años del estallido",
+      "titulo": "Estudiantes en la calle",
+      "texto": "El 18 de octubre, miles marcharon contra los recortes del gobierno de Kast."
+    },
+    {
+      "estilo": "pais",
+      "titulo": "Ecuador",
+      "meta": "8 OCT 2026",
+      "rotulo": "Lo público",
+      "texto": "Marchas en tres ciudades, entre ellas Quito y Cuenca. Pedían:",
+      "items": [
+        "Salud y educación",
+        "Seguridad",
+        "No vender los activos del IESS"
+      ],
+      "credito": "Fuentes: EFE (Infobae) · Primicias"
+    },
+    {
+      "foto": "fuentes/planton-10.webp",
+      "foco": [
+        0.57,
+        0.5
+      ],
+      "meta": "BOGOTÁ · 17 OCT 2026",
+      "credito": "Foto: Martín Perea / Dial Medio",
+      "rotulo": "Colombia · la memoria",
+      "titulo": "Defender el museo",
+      "texto": "Al menos 500 personas rechazaron el retiro de unas 30 piezas del Museo Nacional."
+    },
+    {
+      "foto": "fuentes/chile-carabineros.jpg",
+      "foco": [
+        0.62,
+        0.5
+      ],
+      "meta": "SANTIAGO · 1 OCT 2026",
+      "credito": "Foto: Matías Villacura · CC BY 4.0",
+      "rotulo": "La respuesta",
+      "titulo": "Agua a presión",
+      "texto": "En Bruselas, Santiago y Bogotá. En Francia, 1.200 detenidos, según el primer ministro."
+    },
+    {
+      "estilo": "citas",
+      "rotulo": "La versión de los gobiernos",
+      "citas": [
+        {
+          "texto": "Los responsables serán procesados y castigados.",
+          "autor": "Emmanuel Macron · Francia"
+        },
+        {
+          "texto": "El Gobierno no cederá a los gritos de la calle.",
+          "autor": "Carlos Abreu Amorim · Portugal"
+        },
+        {
+          "texto": "Su vocación no consiste en servir como instrumento de adoctrinamiento político.",
+          "autor": "Paola Holguín · Colombia, sobre el museo"
+        }
+      ],
+      "credito": "Fuentes: Al Jazeera · Infobae · traducción de Dial Medio"
+    },
+    {
+      "estilo": "analisis",
+      "rotulo": "Desde Colombia",
+      "semitono": "fuentes/francia-carteles.jpg",
+      "foco_semitono": [
+        0.55,
+        0.42
+      ],
+      "titulo": "¿Qué las *une*?",
+      "items": [
+        "El costo de vivir y la vivienda",
+        "Recortes en educación y cultura",
+        "Jóvenes al frente",
+        "Respuestas con antidisturbios"
+      ],
+      "cierre": "Aquí el reclamo es la memoria; en Europa, el bolsillo. El patrón se parece.",
+      "credito": "Análisis: Dial Medio · con A. Alemanno (HEC París)"
+    }
+  ],
+  "sello": "Al aire"
+}
