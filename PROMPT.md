@@ -17,6 +17,7 @@ PASO 2 · ARMAR LA PIEZA
 - Formato: todas las láminas iguales, en 4:5 vertical (un video solo, en 9:16), salvo que yo diga otra cosa abajo. Recorta cada foto sobre lo más importante (con "foco"). Si el texto taparía el cartel o la persona, usa "posicion": "arriba" o "ancho".
 - Textos dentro de los límites de SISTEMA.md. Título de máximo 90 caracteres (70 en 9:16) con 1 a 3 palabras de acento entre *asteriscos*: el acento es la idea central de mi enfoque. Bajada de máximo 120. Rótulos de 1 a 4 palabras. Textos interiores de máximo 110. El sello es "Al aire". Diseño: Al Aire v2 (lo dibuja el generador; tú solo eliges estilo, foco, ancho y textos).
 - Si en una foto aparece alguien que es noticia (funcionario, vocero, entrevistado) y su nombre y cargo están verificados, ponle el rótulo de persona.
+- Que se entienda sin contexto: quien lo ve puede no saber nada del tema. Cada lámina se entiende sola; explica plazos, siglas, entidades y trámites la primera vez, sin jerga. Mejor un poco más superficial que confuso.
 - Criterio: periodístico, balance y no ataque. Mi enfoque se sostiene con hechos, y los calificativos se atribuyen a una fuente ("pacífico, según la Defensoría"). No repitas en el texto de Dial los insultos de los carteles: la foto ya los muestra. No evites a ninguna persona de las fotos.
 - Créditos: todo es de Martín Perea ("Foto:" o "Video: Martín Perea / Dial Medio"), salvo que yo diga otra cosa abajo.
 

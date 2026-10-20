@@ -37,6 +37,12 @@ Lo aprobó Martín con el carrusel "Protestas en el mundo". Referentes: Mutante 
 ## 2. Criterio editorial
 
 - **Periodístico, balance y no ataque.** Siempre va la versión oficial o de la contraparte, con cita textual verificada. El enfoque de Martín (p. ej., "fue pacífico") se sostiene con hechos y con calificativos **atribuidos** a una fuente ("pacífico, según la Defensoría").
+- **Que se entienda sin contexto (regla de Martín, 20 oct 2026).** Quien ve la pieza puede no saber nada del tema. Cada lámina se entiende sola: es mejor quedar un poco más superficial pero 100 % autoexplicativo.
+  - Nada se da por sabido: si hay un plazo, se dice de qué es y por qué existe; si hay una sigla, una entidad, un fondo o un trámite, se explica en pocas palabras la primera vez ("la JEP, el tribunal de paz"; "proposiciones, los cambios que proponen los congresistas").
+  - Nada de jerga del Congreso, de la economía o del derecho sin traducir ("conciliación", "en bloque", "ponencia", "decreto").
+  - Personas: nombre y qué son, aunque sean conocidas. Hechos anteriores: cuándo y qué pasó ("el terremoto del 10 de agosto").
+  - Las cifras grandes se aterrizan cuando se puede ("seis de cada diez pesos").
+  - Prueba antes de entregar: leer cada lámina como alguien que no ha visto ninguna otra ni ha oído de la noticia. Si queda una pregunta del tipo "¿de qué?" o "¿por qué?", se reescribe.
 - Lo que dicen los carteles lo muestra la foto. Dial no repite insultos ni acusaciones en su propio texto.
 - No evitar a ninguna persona de las fotos. No inventar nombres ni cargos.
 - **Créditos.** Por defecto todo es de Martín: `Foto: Martín Perea / Dial Medio`. En los videos el generador cambia solo "Foto:" por "Video:". En la descripción: `Fotos: Martín Perea / Dial Medio`, o `Fotos y video: …` si hay video. Si Martín dice que algo es de otra persona (p. ej., Sergio Ruiz), se pone `"credito"` en esa lámina y se ajusta la descripción. Cualquier otro rol que haga falta nombrar (texto, edición) es de Martín, salvo que él diga otra cosa.

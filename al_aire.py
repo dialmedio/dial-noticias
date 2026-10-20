@@ -331,6 +331,21 @@ def rotulo_persona(img, persona):
     d.ellipse([px - r, py - r, px + r, py + r], fill=BRASA)
 
 
+def partir(texto_, fuente, ancho):
+    """Corta un texto en líneas que caben en `ancho` (nada se sale del cuadro)."""
+    lineas, act = [], ""
+    for w in texto_.split():
+        prueba = (act + " " + w).strip()
+        if act and fuente.getlength(prueba) > ancho:
+            lineas.append(act)
+            act = w
+        else:
+            act = prueba
+    if act:
+        lineas.append(act)
+    return lineas
+
+
 def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
     r = dn.Rico(contenido, tam, peso, color=color, interlineado=inter)
     r.f = dn.sans(tam, peso, 96)
@@ -420,7 +435,9 @@ def l_pais(cfg, lam, n):
     """Campo terracota con el país en tipo de madera (para países sin foto libre)."""
     img = campo(TERRACOTA, 10 + n)
     cabecera(img, lam.get("meta", cfg["meta"]), sobre_foto=False, logo_papel=True)
-    palabra_madera(img, lam["titulo"].upper(), T + 538, 3 + n)
+    # el contenido se dibuja en su capa; si no cabe, todo el bloque (y el título) sube
+    final = img
+    img = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
     y = T + 598
     if lam.get("rotulo"):
         etiqueta(img, M, y, lam["rotulo"].upper(), fondo=CARBON, color=PAPEL, punto=False, tam=26)
@@ -429,9 +446,11 @@ def l_pais(cfg, lam, n):
         y = texto(img, M, y, lam["texto"], 46, (W - 2 * M - R), PAPEL) + 20
     d = ImageDraw.Draw(img)
     for i, it in enumerate(lam.get("items", []), 1):
+        fi = dn.sans(48, 600, 88)
         d.text((M, y + 50), f"{i:02d}", font=dn.mono(30, True), fill=CARBON, anchor="ls")
-        d.text((M + 70, y + 50), it, font=dn.sans(48, 600, 88), fill=PAPEL, anchor="ls")
-        y += 72
+        for k, linea in enumerate(partir(it, fi, W - 2 * M - R - 70)):
+            d.text((M + 70, y + 50 + k * 54), linea, font=fi, fill=PAPEL, anchor="ls")
+        y += 72 + 54 * (len(partir(it, fi, W - 2 * M - R - 70)) - 1)
     for c in lam.get("citas", []):
         y += 30
         d.text((M - 6, y + 96), "“", font=dn.serif(150), fill=CARBON, anchor="ls")
@@ -440,8 +459,14 @@ def l_pais(cfg, lam, n):
         y = r.dibujar(d, M + 70, y + 10, r.lineas((W - 2 * M - R) - 70))
         d.text((M + 70, y + 40), c["autor"].upper(), font=dn.mono(22, True), fill=CARBON, anchor="ls")
         y += 50
-    pie(img, lam.get("credito", "").upper(), PAPEL + (215,))
-    return img
+    sube = max(0, y - (H - B - 30))
+    sube = min(sube, 330)  # el título no puede subir más allá de la cabecera
+    palabra_madera(final, lam["titulo"].upper(), T + 538 - sube, 3 + n)
+    final.alpha_composite(img.crop((0, sube, W, sube + H)))
+    if y - sube > H - B - 10:
+        print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o los items")
+    pie(final, lam.get("credito", "").upper(), PAPEL + (215,))
+    return final
 
 
 def l_citas(cfg, lam, n):
@@ -454,12 +479,15 @@ def l_citas(cfg, lam, n):
         r = dn.Rico(c["texto"], 56, 600, color=CARBON, interlineado=1.1)
         r.f = dn.sans(56, 600, 88)
         bloques.append((r, r.lineas((W - 2 * M - R) - 100), c["autor"]))
-    total = sum(r.alto(l) + 80 for r, l, _ in bloques) + 70 * (len(bloques) - 1)
+    total = sum(r.alto(l) + 80 + 30 * (len(partir(a_.upper(), dn.mono(22, True), W - 2 * M - R - 100)) - 1) for r, l, a_ in bloques) + 70 * (len(bloques) - 1)
     y = T + 118 + (H - T - 118 - B - 20 - total) / 2
     for k, (r, l, autor) in enumerate(bloques):
         d.text((M - 8, y + 128), "“", font=dn.serif(200), fill=TERRACOTA, anchor="ls")
         y = r.dibujar(d, M + 100, y + 10, l)
-        d.text((M + 100, y + 40), autor.upper(), font=dn.mono(22, True), fill=(95, 85, 76), anchor="ls")
+        fa_ = dn.mono(22, True)
+        for k, linea in enumerate(partir(autor.upper(), fa_, W - 2 * M - R - 100)):
+            d.text((M + 100, y + 40 + k * 30), linea, font=fa_, fill=(95, 85, 76), anchor="ls")
+        y += 30 * (len(partir(autor.upper(), fa_, W - 2 * M - R - 100)) - 1)
         y += 80
         if k < len(bloques) - 1:
             d.line([(M + 100, y), (W - M, y)], fill=(204, 194, 180), width=2)
@@ -487,9 +515,12 @@ def l_analisis(cfg, lam, n):
     y = dibujar_titular(img, M, alto_foto + 30, lam["titulo"], 140 * lam.get("escala", 1.0), (W - 2 * M - R)) + 34
     d = ImageDraw.Draw(img)
     for i, it in enumerate(lam.get("items", []), 1):
+        fi = dn.sans(46, 600, 88)
+        partes = partir(it, fi, W - 2 * M - R - 70)
         d.text((M, y + 46), f"{i:02d}", font=dn.mono(30, True), fill=BRASA, anchor="ls")
-        d.text((M + 70, y + 46), it, font=dn.sans(46, 600, 88), fill=PAPEL, anchor="ls")
-        y += 66
+        for k, linea in enumerate(partes):
+            d.text((M + 70, y + 46 + k * 52), linea, font=fi, fill=PAPEL, anchor="ls")
+        y += 66 + 52 * (len(partes) - 1)
     if lam.get("cierre"):
         y += 22
         h = alto_texto(lam["cierre"], 42, (W - 2 * M - R) - 30)
