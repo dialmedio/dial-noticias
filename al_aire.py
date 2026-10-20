@@ -377,7 +377,7 @@ def degradado_bajo(img, desde=0.42, fuerza=0.92):
 
 def l_portada(cfg, lam):
     img = foto_base(cfg, lam)
-    degradado_bajo(img, 0.38 if B < 200 else 0.3)
+    degradado_bajo(img, 0.34 if B < 200 else 0.28, 0.96)  # portada: titular grande, fotos cargadas
     cabecera(img, lam.get("meta", cfg["meta"]))
     tam = 108 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
