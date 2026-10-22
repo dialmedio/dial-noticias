@@ -211,7 +211,8 @@ def l_foto(cfg, lam, n):
 
 def l_ficha(cfg, lam, n):
     """Papel con el dato grande en serif. Opcional: banda de foto en riso arriba (semitono, foco_semitono),
-    antetítulo (rotulo), dato, dato_pie, titulo, texto, campos [[etiqueta, valor]] en lista con filetes,
+    antetítulo (rotulo), dato, dato_pie, destacado (la frase clave sobre franja brasa), titulo, texto,
+    campos [[etiqueta, valor]] en lista con filetes,
     items numerados y cierre. También hace de lámina de análisis en esta línea."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
     img = aa.campo(PAPEL, 50 + n, 0.025)
@@ -220,7 +221,7 @@ def l_ficha(cfg, lam, n):
     y = T + 150
     con_foto = bool(lam.get("semitono"))
     if con_foto:
-        alto_foto = round(H * 0.4)
+        alto_foto = round(H * lam.get("alto_foto", 0.4))
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         img.alpha_composite(riso(foto, (W, alto_foto), tuple(lam.get("foco_semitono", (0.5, 0.5)))), (0, 0))
         y = alto_foto + 56
@@ -240,6 +241,8 @@ def l_ficha(cfg, lam, n):
         if lam.get("dato_pie"):
             y = aa.texto(capa, M, y + 4, lam["dato_pie"], 38, ancho, CARBON, peso=600) + 10
         y += 22
+    if lam.get("destacado"):  # la idea que explica la lámina, en cursiva sobre franja brasa
+        y = titular(capa, M + 6, y + 4, "*" + lam["destacado"].strip("*") + "*", 66, ancho - 12, color=CARBON, franja=BRASA) + 30
     if lam.get("titulo"):
         y = titular(capa, M, y, lam["titulo"], 84 * lam.get("escala", 1.0), ancho, color=CARBON, franja=SALVIA) + 22
     if lam.get("texto"):
@@ -393,13 +396,49 @@ def l_lugar(cfg, lam, n):
     return img
 
 
+def l_paises(cfg, lam, n):
+    """Varios lugares, uno debajo del otro (p. ej. "No es solo Brasil"): campo eucalipto, titular con
+    franja y, por cada lugar, su nombre en serif cursiva, un dato grande opcional en brasa y un texto que
+    se entiende solo. "lugares": [{"nombre", "dato" (opcional), "texto"}]."""
+    W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
+    img = aa.campo(EUCALIPTO, 70 + n, 0.03)
+    cabecera(img, lam.get("meta", cfg["meta"]), "oscuro")
+    d = ImageDraw.Draw(img)
+    ancho = W - 2 * M - R
+    capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
+    dc = ImageDraw.Draw(capa)
+    y = 0
+    if lam.get("rotulo"):
+        antetitulo(capa, M, y + 24, lam["rotulo"], PAPEL, BRASA)
+        y += 54
+    if lam.get("titulo"):
+        y = titular(capa, M, y, lam["titulo"], 88, ancho) + 30
+    for k, lugar in enumerate(lam["lugares"]):
+        dc.line([(M, y), (M + ancho, y)], fill=PAPEL + (110,), width=2)
+        y += 22
+        fn = cursiva(64)
+        dc.text((M, y + 54), lugar["nombre"], font=fn, fill=PAPEL, anchor="ls")
+        if lugar.get("dato"):
+            dc.text((M + ancho, y + 58), lugar["dato"], font=serif(76), fill=BRASA, anchor="rs")
+        y += 78
+        y = aa.texto(capa, M, y, lugar["texto"], 36, ancho, PAPEL + (235,)) + 26
+    # el bloque se centra entre la cabecera y el pie
+    arriba, abajo = T + 120, H - B - 20
+    y0 = arriba + max(0, (abajo - arriba - y) * 0.45)
+    img.alpha_composite(capa.crop((0, -round(y0), W, H - round(y0))))
+    if y0 + y > abajo + 10:
+        print(f"  ojo: la lámina {n} se pasa de alto; acorta los textos")
+    pie(img, lam.get("credito", ""), PAPEL + (200,))
+    return img
+
+
 def l_dos(cfg, lam, n):
     """Dos personas con el mismo trato (p. ej. los candidatos de una elección): dos retratos del mismo
     tamaño lado a lado, nombre y cargo en cada uno, y abajo una banda eucalipto con titulo y texto.
     "personas": [{"foto", "foco", "nombre", "cargo", "credito"}, {...}]"""
     W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
     img = aa.campo(EUCALIPTO, 60 + n, 0.03)
-    alto = round(H * 0.64)
+    alto = round(H * lam.get("alto_fotos", 0.64))
     medio = 6
     an = (W - medio) // 2
     fn, fc = serif(50), dn.mono(19, True)
@@ -420,7 +459,9 @@ def l_dos(cfg, lam, n):
     if lam.get("titulo"):
         y = titular(img, M, y, lam["titulo"], 84, ancho) + 14
     if lam.get("texto"):
-        aa.texto(img, M, y, lam["texto"], 36, ancho, PAPEL + (235,))
+        y = aa.texto(img, M, y, lam["texto"], 34, ancho, PAPEL + (235,))
+    if y > H - B - 10:
+        print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o baja alto_fotos")
     creditos = " · ".join(p.get("credito", "") for p in lam["personas"] if p.get("credito"))
     pie(img, lam.get("credito", creditos), PAPEL + (190,))
     return img
@@ -455,7 +496,7 @@ def l_cta(cfg, lam, n):
 
 
 ESTILOS = {"portada": l_portada, "foto": l_foto, "ficha": l_ficha, "serie": l_serie, "citas": l_citas,
-           "pais": l_lugar, "lugar": l_lugar, "dos": l_dos, "cta": l_cta}
+           "pais": l_lugar, "lugar": l_lugar, "paises": l_paises, "dos": l_dos, "cta": l_cta}
 
 
 def estilo_de(lam):
@@ -463,6 +504,8 @@ def estilo_de(lam):
         return lam["estilo"]
     if lam.get("personas"):
         return "dos"
+    if lam.get("lugares"):
+        return "paises"
     if lam.get("serie"):
         return "serie"
     if lam.get("tipo") == "texto" and (lam.get("dato") or lam.get("campos")):
