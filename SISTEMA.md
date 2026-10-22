@@ -21,24 +21,36 @@ Lo aprobó Martín con el carrusel "Protestas en el mundo". Referentes: Mutante 
   - `pais`: campo terracota con el `titulo` en tipo de madera (papel, con la pasada corrida en carbón), `rotulo`, `texto`, `items` numerados y `citas` en serif. Para países o lugares sin foto libre.
   - `citas`: papel limpio, sin textura en las letras. Comillas grandes en terracota, la cita en Sans 600 y el autor en mono. Es la lámina de "la versión del Gobierno".
   - `analisis`: carbón con una foto en semitono brasa (`"semitono": "fuentes/x.jpg"`, `"foco_semitono": [x, y]`) con borde rasgado, el `titulo` con franja, `items` numerados en mono y `cierre` con filete. Para la lámina de análisis o cierre. Sin `semitono`, el título sube.
-  - `ficha`: solo en Nuevos Mundos Posibles (ver esa sección).
   - `cta`: **siempre la última lámina** (desde el 19 oct 2026). Carbón con un signo de pregunta grande en tipo de madera terracota, rótulo `TU OPINIÓN`, la `pregunta` en titular de impacto (con *acento*), un `texto` opcional que la aterriza, las cajas `● COMENTA · GUARDA · COMPARTE` y la firma (logotipo, "Sintonizar es conversar." y @dialmedio). La pregunta es abierta, sobre el tema de la pieza y **sin tomar partido** (p. ej. "¿*Negociar o someter*? ¿Cuál crees que es el camino hacia la paz?"). La misma pregunta va al final de las dos descripciones, antes de los créditos.
 - **Rótulo de persona (v2):** un punto brasa sobre la persona y una guía horizontal hacia dos cajas planas, como la cabecera: el nombre (papel, titular condensado) y el cargo (carbón, mono). `"persona": {"nombre", "cargo", "x", "y", "lado"}`: `x`, `y` es el punto, **sobre el hombro o el pecho, nunca sobre la cara**; `lado` (`"izq"` o `"der"`) es hacia dónde sale el rótulo. Hay que elegir el lado con espacio libre, sin tapar otras caras. El rótulo queda centrado a la altura del punto.
 - **Franja del acento:** se pintan todas las franjas antes que el texto, para que las letras que bajan (g, j, p, q, y) de la línea de arriba no queden cortadas. La puntuación pegada al acento (¿ ? , :) entra en la franja.
 - **Texturas:** solo de impresión y evidentes. Tipo de madera (v3, 19 oct 2026): borde nítido y mordido, veta horizontal larga, huecos de canto nítido y poros sueltos; la segunda pasada, corrida y en otra tinta, solo asoma por fuera de la letra. Moteado amplio en los campos planos. Nunca grano sobre las fotos ni en el texto corrido.
 
-## Línea Nuevos Mundos Posibles (desde el 21 oct 2026)
+## Línea Nuevos Mundos Posibles (v2, 22 oct 2026)
 
-Buenas noticias: conservación, ciencia y biología, clima, comunidades y economías propias, ciudades que cambian. Es una línea propia de Al Aire, con corrida de propuestas los lunes y los jueves. Se activa con `"seccion": "nuevos-mundos"` arriba en el JSON (sin `"seccion"` todo sale como Al Aire, idéntico). Misma estructura, tipografía, rótulos, rótulo de persona y lámina `cta`; cambia la tinta y la textura, con la idea de un **cuaderno de campo**:
+Buenas noticias: conservación, ciencia y biología, clima, comunidades y economías propias, ciudades que cambian. Es una línea propia de Al Aire, con corrida de propuestas los lunes y los jueves. Se activa con `"seccion": "nuevos-mundos"` arriba en el JSON (sin `"seccion"` todo sale como Al Aire, idéntico). La dibuja `nuevos_mundos.py`, con la misma estructura de Al Aire (cabecera, logo, crédito abajo, lámina final de pregunta) y un estilo propio.
 
-- **Sello:** `NUEVOS MUNDOS POSIBLES` con una **hoja** donde Al Aire lleva el punto "en vivo". No se pone `sello` en el JSON. Como el nombre es largo, el lugar y la fecha (`meta`) bajan solos a una segunda caja bajo el sello.
-- **Color:** el **brote** `#A8C656` reemplaza a la brasa (franjas del acento, sello, numeración, punto del rótulo de persona). **Selva** `#162C21` es el fondo de `analisis` y `cta` (en vez de carbón) y **musgo** `#345C40` el campo de la lámina de lugar (en vez de terracota). Carbón, papel y el logo no cambian.
-- **Texturas propias:** cuadrícula de libreta de campo en las láminas de papel (`citas` y `ficha`) y **grabado de línea** en las fotos de las láminas sin foto (`analisis` y `ficha`), como las láminas de historia natural, en vez del semitono de puntos. El tipo de madera se mantiene (lugar, dato, signo del cierre).
-- **Lámina `ficha`** (propia de esta línea, `"tipo": "texto", "estilo": "ficha"`; se deduce si trae `dato` o `campos`): papel cuadriculado con, en orden y todo opcional, la foto en grabado (`semitono`, `foco_semitono`, `pie_foto`: "Fig. 1 · …"), `rotulo`, el **dato** grande en tipo de madera (`"dato": "+40 %"`, corto, con su `dato_pie`), `titulo` con acento, `texto` y la **etiqueta de herbario** `campos`: `[["Especie", "Rana de cristal (Nymphargus …)"], ["Dónde", "…"], ["Quién", "…"]]`. Es la lámina del dato que prueba la buena noticia. Sin foto, el contenido se centra solo (sirve de portada cuando no hay fotos). Si el generador avisa que se pasa de alto, quitar la foto o un campo.
+La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Martín el 22 oct: "muy predecible y los cuadros no funcionan". Pidió suavidad, elegancia, un toque de sutileza, coherente con Dial y con **el verde y el naranja juntos**. Referentes: The Guardian, La Linterna y Mutante.
+
+- **Titulares en Instrument Serif** (la serif de Dial), con el acento en cursiva: brasa sobre foto o verde, terracota sobre papel.
+- **Color:** eucalipto `#56705E` (verde suave, hacia el gris) y brasa `#E58A3A`; eucalipto hondo `#2C3E32` en el cierre; papel y hueso de Dial en las láminas de datos y de citas; salvia `#C8D3BE` para barras y filetes. Nada de cuadrícula ni de tablas con bordes.
+- **Sello:** caja eucalipto `NUEVOS MUNDOS POSIBLES` con una hoja brasa. La fecha va al lado o debajo; sobre foto, en caja carbón.
+- **Rótulos sin caja:** una hoja brasa y el texto en mono (papel sobre fotos y verdes, eucalipto sobre papel), como los antetítulos del Guardian.
+- **Fotos en las láminas de datos:** banda arriba en **riso de dos tintas** (eucalipto en las sombras, brasa en los medios tonos, registro apenas corrido), sin grano.
+- **Fotos:** que sean fuertes y profesionales (Martín, 22 oct): selva, árboles, tala o fuego que impacten, aunque no sean exactamente del lugar de la noticia (el crédito dice dónde y cuándo). Si la noticia toca una elección o a personas públicas, van sus fotos.
+- **Estilos** (`"estilo"`; si no se pone, se deduce):
+  - `portada` y fotos interiores: como en Al Aire, con el titular en serif y `rotulo` como antetítulo.
+  - `ficha` (`"tipo": "texto"`): papel con, en orden y todo opcional, la banda en riso (`semitono`, `foco_semitono`, `pie_foto`), `rotulo`, el **dato** grande en serif eucalipto, `dato_pie`, `titulo`, `texto`, `campos` `[[etiqueta, valor]]` en lista con filetes, `items` numerados en cursiva y `cierre` con filete brasa. Sin foto, el contenido se centra (sirve de portada cuando no hay fotos). También hace las veces de `analisis`.
+  - `serie`: el cambio grande (`dato`, p. ej. "−74 %"), `dato_pie` y barras horizontales: `"serie": [["2021", 13038], …]`, `"unidad"`. La última barra va en brasa.
+  - `lugar` (o `pais`): campo eucalipto con el nombre en serif cursiva grande, `rotulo`, `texto` e `items`; opcional, banda en riso arriba.
+  - `citas`: hueso, comillas grandes en brasa, la cita en serif (el acento con `*…*`) y el autor en mono eucalipto.
+  - `dos`: dos personas con el mismo trato (p. ej. los candidatos de una elección): retratos del mismo tamaño lado a lado, nombre y cargo en cada uno, y abajo la banda eucalipto con `rotulo`, `titulo` y `texto`. `"personas": [{"foto", "foco", "nombre", "cargo"}, …]`. Orden neutral (alfabético por apellido) y la misma medida en las dos descripciones.
+  - `cta`: eucalipto hondo, el signo en cursiva brasa, la pregunta en serif y la firma.
 - **Criterio:** que esté probado, no solo anunciado; los límites van en la pieza (una lámina de "lo que falta"); sin maquillaje verde (nunca solo el comunicado de una empresa o un gobierno sobre sus logros). Ciencia: nombre común y científico, y "especie nueva" solo si está descrita formalmente.
+- **Mensajes de Martín:** si pide una dedicatoria o un mensaje, se escribe con palabras propias de Dial a partir de su idea, no copiando literal su nota (22 oct).
 - **Fotos de especies:** también de iNaturalist, solo CC0, CC BY o CC BY-SA (nunca NC ni ND), con las mismas reglas de 3c.
 - **Descripción:** `📍 Cómo funciona` cuando no hay versión del Gobierno, y siempre `📍 Lo que falta`. Hashtags con `#NuevosMundosPosibles` y `#DialMedio` al final.
-- Ejemplo: `ejemplo/nuevos-mundos-muestra.json` (muestra de diseño, sin noticia real).
+- Ejemplos: `ejemplo/nuevos-mundos-muestra.json` (muestra de diseño, sin noticia real).
 
 ## 1. Investigar y verificar (antes de escribir una sola lámina)
 

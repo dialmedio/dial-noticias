@@ -35,7 +35,6 @@
         0.8,
         0.6
       ],
-      "pie_foto": "Fig. 1 · Montañas de Jambaló, Cauca",
       "rotulo": "Ficha de campo",
       "dato": "2 veces",
       "dato_pie": "por semana: los lunes y los jueves.",
@@ -53,11 +52,12 @@
           "Con datos verificados y sus límites"
         ]
       ],
-      "credito": "Foto: Fabiammoreno · CC BY-SA 4.0"
+      "credito": "Foto: Fabiammoreno · CC BY-SA 4.0",
+      "pie_foto": "Montañas de Jambaló, Cauca"
     },
     {
       "tipo": "texto",
-      "estilo": "pais",
+      "estilo": "lugar",
       "titulo": "Selva",
       "rotulo": "Territorio",
       "texto": "Colombia es uno de los países con más biodiversidad del planeta. Ahí hay noticias todos los días.",
@@ -73,7 +73,7 @@
       "rotulo": "Por qué esta línea",
       "citas": [
         {
-          "texto": "Contar lo que funciona también es periodismo: con datos, con sus límites y sin maquillaje verde.",
+          "texto": "Contar lo que funciona también es periodismo: con datos, con sus límites y *sin maquillaje verde*.",
           "autor": "Nuevos mundos posibles · Dial Medio"
         }
       ]

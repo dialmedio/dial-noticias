@@ -5,9 +5,8 @@ etiquetas en caja) y La Linterna (tipos de madera, tinta con textura de prensa,
 registro imperfecto). Todo dentro de la paleta Dial; la brasa pasa a ser el color
 de Al Aire (el manual ya la reserva para los estados "en vivo").
 
-Desde el 21 oct 2026 dibuja también la línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos"):
-la misma estructura con tinta brote, selva y musgo, la hoja en el sello, cuadrícula de libreta de
-campo, grabado de línea y la lámina de ficha.
+La línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py, que usa
+las piezas de este archivo (cabecera, textos, fotos, hoja) con su propio estilo.
 """
 import sys
 from pathlib import Path
@@ -20,36 +19,32 @@ import dial_noticias as dn  # noqa: E402
 
 CARBON, PAPEL, HUESO = dn.CARBON, dn.PAPEL, (233, 223, 207)
 TERRACOTA, BRASA = dn.TERRACOTA, (229, 138, 58)
-BROTE, MUSGO, SELVA = (168, 198, 86), (52, 92, 64), (22, 44, 33)  # Nuevos mundos posibles
 W, H = 1080, 1350
 M = 72
 T, B, R = 62, 110, 0   # cabecera, margen inferior y margen derecho extra (zona segura en 9:16)
 FORMATO = "4:5"
 SELLO = "AL AIRE"
 
-# Líneas de Al Aire (21 oct 2026): misma estructura, cada una con su tinta. "seccion" en el JSON.
+# Tintas de la línea ("seccion" en el JSON). Una línea con otra estructura (Nuevos mundos) tiene su módulo.
 #   acento: franja, sello y numeración · fondo: análisis y cierre · campo: lámina de lugar
 #   tinta: signo del cierre · comillas: las de la lámina de citas, sobre papel · sombra: segunda pasada del tipo de madera
-#   simbolo: lo que va en el sello ("punto" en vivo u "hoja") · cuadricula: libreta de campo en papel
-#   grabado: las fotos de las láminas sin foto van en grabado de línea en vez de semitono de puntos
+#   simbolo: lo que va en el sello ("punto" en vivo u "hoja")
 SECCIONES = {
     "al-aire": dict(sello="Al aire", acento=BRASA, fondo=CARBON, campo=TERRACOTA, tinta=TERRACOTA,
-                    comillas=TERRACOTA, sombra=CARBON, simbolo="punto", cuadricula=False, grabado=False),
-    "nuevos-mundos": dict(sello="Nuevos mundos posibles", acento=BROTE, fondo=SELVA, campo=MUSGO, tinta=BROTE,
-                          comillas=MUSGO, sombra=SELVA, simbolo="hoja", cuadricula=True, grabado=True),
+                    comillas=TERRACOTA, sombra=CARBON, simbolo="punto"),
 }
 ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA = BRASA, CARBON, TERRACOTA, TERRACOTA, TERRACOTA, CARBON
-SIMBOLO, CUADRICULA, GRABADO = "punto", False, False
+SIMBOLO = "punto"
 
 
 def seccion(cfg):
     """Aplica la tinta de la línea de la noticia (Al Aire por defecto)."""
-    global SELLO, ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA, SIMBOLO, CUADRICULA, GRABADO
-    s = SECCIONES[cfg.get("seccion", "al-aire")]
+    global SELLO, ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA, SIMBOLO
+    s = SECCIONES.get(cfg.get("seccion"), SECCIONES["al-aire"])  # Nuevos mundos usa las medidas y tintas de base
     SELLO = cfg.get("sello", s["sello"]).upper()
     ACENTO, FONDO, CAMPO, TINTA = s["acento"], s["fondo"], s["campo"], s["tinta"]
     COMILLAS, SOMBRA = s["comillas"], s["sombra"]
-    SIMBOLO, CUADRICULA, GRABADO = s["simbolo"], s["cuadricula"], s["grabado"]
+    SIMBOLO = s["simbolo"]
 
 
 def lienzo(w, h, formato=None):
@@ -165,39 +160,6 @@ def semitono(foto, tam, celda, tinta_color, fondo_color, angulo=22, contraste=1.
     capa.putalpha(puntos)
     out.alpha_composite(capa)
     return out
-
-
-def grabado(foto, tam, periodo, tinta_color, fondo_color, contraste=1.3, foco=(0.5, 0.5), luz=False):
-    """Foto en grabado de línea, como las láminas de historia natural (Nuevos mundos posibles).
-
-    Líneas horizontales que engordan en las sombras y se ondulan apenas con la luz de la foto."""
-    s = 2
-    w, h = tam[0] * s, tam[1] * s
-    g = dn.recortar(foto.convert("L"), f"{tam[0]}:{tam[1]}", foco).resize((w, h), Image.LANCZOS)
-    a = np.asarray(g, np.float32) / 255
-    a = np.clip((a - 0.5) * contraste + 0.5, 0, 1)
-    oscuro = a if luz else 1 - a  # cuánta tinta lleva cada punto
-    suave = np.asarray(g.filter(ImageFilter.GaussianBlur(10 * s)), np.float32) / 255
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    p = periodo * s
-    fase = ((yy + 2.2 * s * np.sin(xx / (41 * s)) + p * 0.9 * suave) % p) / p
-    grosor = 0.06 + 0.78 * oscuro  # fracción del periodo que ocupa la línea
-    alfa = np.clip((grosor * 0.5 - np.abs(fase - 0.5)) * p + 0.5, 0, 1)
-    alfa = Image.fromarray((alfa * 255).astype(np.uint8)).resize(tam, Image.LANCZOS)
-    out = Image.new("RGBA", tam, fondo_color + (255,))
-    capa = Image.new("RGBA", tam, tinta_color + (0,))
-    capa.putalpha(alfa)
-    out.alpha_composite(capa)
-    return out
-
-
-def cuadricula(img, color, paso=36, alfa=40, y0=0):
-    """Cuadrícula de libreta de campo: línea fina cada `paso` y más marcada cada cinco."""
-    d = ImageDraw.Draw(img)
-    for k, x in enumerate(range(M % paso, W, paso)):
-        d.line([(x, y0), (x, H)], fill=color + (alfa * (2 if k % 5 == 0 else 1),), width=1)
-    for k, y in enumerate(range(y0, H, paso)):
-        d.line([(0, y), (W, y)], fill=color + (alfa * (2 if k % 5 == 0 else 1),), width=1)
 
 
 def hoja(img, cx, cy, r, color):
@@ -567,8 +529,6 @@ def l_pais(cfg, lam, n):
 def l_citas(cfg, lam, n):
     """Papel limpio: las voces de las partes. Comillas grandes en terracota, texto sin textura."""
     img = campo(PAPEL, 20 + n, 0.03)
-    if CUADRICULA:
-        cuadricula(img, SELVA, alfa=22)
     cabecera(img, lam.get("rotulo", "").upper() or lam.get("meta", cfg["meta"]), oscuro=False, sobre_foto=False)
     d = ImageDraw.Draw(img)
     bloques = []
@@ -600,10 +560,7 @@ def l_analisis(cfg, lam, n):
     if lam.get("semitono"):
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         foco = tuple(lam.get("foco_semitono", (0.5, 0.45)))
-        if GRABADO:
-            st = grabado(foto, (W, alto_foto), 8, ACENTO, FONDO, foco=foco, contraste=1.25, luz=True)
-        else:
-            st = semitono(foto, (W, alto_foto), 7, ACENTO, FONDO, foco=foco, contraste=1.5, luz=True)
+        st = semitono(foto, (W, alto_foto), 7, ACENTO, FONDO, foco=foco, contraste=1.5, luz=True)
         ras = ruido_fractal(W, 1, 77 + n, (8, 40), (0.6, 0.4))[0]
         mk = Image.new("L", (W, alto_foto), 255)
         dm = ImageDraw.Draw(mk)
@@ -670,72 +627,6 @@ def l_cta(cfg, lam, n):
     return img
 
 
-def l_ficha(cfg, lam, n):
-    """Ficha de campo (Nuevos mundos posibles, 21 oct 2026): papel con cuadrícula de libreta, la foto en
-    grabado como lámina de historia natural, el dato grande en tipo de madera y una etiqueta de herbario.
-
-    Campos (todos opcionales menos uno de dato o titulo): semitono (foto), foco_semitono, pie_foto,
-    rotulo, titulo (con *acento*), dato ("+40 %", "1.200 ha"), dato_pie, campos [[etiqueta, valor]], texto.
-    Sin foto, el contenido se centra en el alto de la lámina."""
-    img = campo(PAPEL, 50 + n, 0.03)
-    cuadricula(img, SELVA, alfa=22)
-    cabecera(img, lam.get("meta", cfg["meta"]), oscuro=False, sobre_foto=False)
-    capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))  # el contenido va en su capa para poder centrarlo
-    d = ImageDraw.Draw(capa)
-    ancho = W - 2 * M - R
-    y0 = T + 120
-    y = y0
-    if lam.get("semitono"):
-        alto_foto = round(H * 0.25)
-        foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
-        gr = grabado(foto, (ancho, alto_foto), 7, SELVA, PAPEL, foco=tuple(lam.get("foco_semitono", (0.5, 0.5))))
-        capa.alpha_composite(gr, (M, y))
-        d.rectangle([M, y, M + ancho, y + alto_foto], outline=CARBON, width=2)
-        y += alto_foto
-        if lam.get("pie_foto"):
-            d.text((M, y + 34), lam["pie_foto"].upper(), font=dn.mono(19), fill=(95, 85, 76), anchor="ls")
-            y += 20
-        y += 50
-    if lam.get("rotulo"):
-        etiqueta(capa, M, y, lam["rotulo"].upper(), fondo=SELVA, color=PAPEL, punto=False, tam=26)
-        y += 78
-    if lam.get("dato"):
-        tam = 210
-        while madera(tam).getlength(lam["dato"]) > ancho and tam > 110:
-            tam -= 10
-        m = Image.new("L", capa.size, 0)
-        ImageDraw.Draw(m).text((M - tam * 0.03, y + tam * 0.8), lam["dato"], font=madera(tam), fill=255, anchor="ls")
-        estampar(capa, m, ACENTO, 70 + n, desfase=(6, 5), opacidad=0.9, debajo_de=m)
-        estampar(capa, m, SELVA, 71 + n)
-        y += tam * 0.86
-        if lam.get("dato_pie"):
-            y = texto(capa, M, y + 6, lam["dato_pie"], 40, ancho, CARBON, peso=600) + 10
-        y += 24
-    if lam.get("titulo"):
-        y = dibujar_titular(capa, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho, color=CARBON) + 26
-    if lam.get("texto"):
-        y = texto(capa, M, y, lam["texto"], 40, ancho, CARBON) + 26
-    if lam.get("campos"):  # etiqueta de herbario: filas con filete, la etiqueta en mono y el valor en sans
-        d = ImageDraw.Draw(capa)
-        fe, fv = dn.mono(20, True), dn.sans(36, 600, 88)
-        col = 250
-        d.line([(M, y), (M + ancho, y)], fill=CARBON, width=2)
-        for etq, valor in lam["campos"]:
-            lineas = partir(valor, fv, ancho - col)
-            d.text((M, y + 44), etq.upper(), font=fe, fill=(95, 85, 76), anchor="ls")
-            for k, linea in enumerate(lineas):
-                d.text((M + col, y + 46 + k * 42), linea, font=fv, fill=CARBON, anchor="ls")
-            y += 66 + 42 * (len(lineas) - 1)
-            d.line([(M, y), (M + ancho, y)], fill=(204, 194, 180), width=2)
-    libre = (H - B - 20) - y
-    baja = max(0, round(libre * 0.45)) if not lam.get("semitono") else 0
-    img.alpha_composite(capa.crop((0, -baja, W, H - baja)) if baja else capa.crop((0, 0, W, H)))
-    if y > H - B - 10:
-        print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto, los campos o quita la foto")
-    pie(img, lam.get("credito", "").upper(), (95, 85, 76))
-    return img
-
-
 def estilo_de(lam):
     if lam.get("estilo"):
         return lam["estilo"]
@@ -744,16 +635,13 @@ def estilo_de(lam):
     if lam.get("tipo") == "cta" or lam.get("pregunta"):
         return "cta"
     if lam.get("tipo") == "texto":
-        if lam.get("dato") or lam.get("campos"):
-            return "ficha"
         if lam.get("semitono"):
             return "analisis"
         return "citas" if lam.get("citas") and not lam.get("titulo") else "pais"
     return "foto"
 
 
-ESTILOS = {"portada": l_portada, "foto": l_foto, "pais": l_pais, "citas": l_citas, "analisis": l_analisis,
-           "cta": l_cta, "ficha": l_ficha}
+ESTILOS = {"portada": l_portada, "foto": l_foto, "pais": l_pais, "citas": l_citas, "analisis": l_analisis, "cta": l_cta}
 
 
 def lamina(cfg, lam, n):
@@ -762,6 +650,9 @@ def lamina(cfg, lam, n):
     formato = cfg.get("formato") or "4:5"
     a, b = (float(x) for x in formato.split(":"))
     lienzo(1080, round(1080 * b / a), formato)
+    if cfg.get("seccion") == "nuevos-mundos":
+        import nuevos_mundos
+        return nuevos_mundos.lamina(cfg, lam, n).convert("RGB")
     estilo = estilo_de(lam)
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
@@ -772,5 +663,8 @@ def capa_video(cfg, lam, w, h):
     """Diseño de la lámina sobre transparente, para ponerlo encima del video."""
     seccion(cfg)
     lienzo(w, h)
+    if cfg.get("seccion") == "nuevos-mundos":
+        import nuevos_mundos
+        return nuevos_mundos.capa_video(cfg, lam)
     lam = dict(lam, _video=True)
     return (l_portada if estilo_de(lam) == "portada" else l_foto)(cfg, lam)
