@@ -612,7 +612,8 @@ def l_analisis(cfg, lam, n):
         img.paste(st, (0, 0), mk)
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.12, fuerza=0.6))
     cabecera(img, lam.get("rotulo", "").upper() or lam.get("meta", cfg["meta"]))
-    y = dibujar_titular(img, M, alto_foto + 30, lam["titulo"], 140 * lam.get("escala", 1.0), (W - 2 * M - R)) + 34
+    y0 = alto_foto + 30 if lam.get("semitono") else T + 260  # sin foto, el análisis sube
+    y = dibujar_titular(img, M, y0, lam["titulo"], 140 * lam.get("escala", 1.0), (W - 2 * M - R)) + 34
     d = ImageDraw.Draw(img)
     for i, it in enumerate(lam.get("items", []), 1):
         fi = dn.sans(46, 600, 88)
@@ -674,18 +675,21 @@ def l_ficha(cfg, lam, n):
     grabado como lámina de historia natural, el dato grande en tipo de madera y una etiqueta de herbario.
 
     Campos (todos opcionales menos uno de dato o titulo): semitono (foto), foco_semitono, pie_foto,
-    rotulo, titulo (con *acento*), dato ("+40 %", "1.200 ha"), dato_pie, campos [[etiqueta, valor]], texto."""
+    rotulo, titulo (con *acento*), dato ("+40 %", "1.200 ha"), dato_pie, campos [[etiqueta, valor]], texto.
+    Sin foto, el contenido se centra en el alto de la lámina."""
     img = campo(PAPEL, 50 + n, 0.03)
     cuadricula(img, SELVA, alfa=22)
     cabecera(img, lam.get("meta", cfg["meta"]), oscuro=False, sobre_foto=False)
-    d = ImageDraw.Draw(img)
+    capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))  # el contenido va en su capa para poder centrarlo
+    d = ImageDraw.Draw(capa)
     ancho = W - 2 * M - R
-    y = T + 120
+    y0 = T + 120
+    y = y0
     if lam.get("semitono"):
         alto_foto = round(H * 0.25)
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         gr = grabado(foto, (ancho, alto_foto), 7, SELVA, PAPEL, foco=tuple(lam.get("foco_semitono", (0.5, 0.5))))
-        img.alpha_composite(gr, (M, y))
+        capa.alpha_composite(gr, (M, y))
         d.rectangle([M, y, M + ancho, y + alto_foto], outline=CARBON, width=2)
         y += alto_foto
         if lam.get("pie_foto"):
@@ -693,26 +697,26 @@ def l_ficha(cfg, lam, n):
             y += 20
         y += 50
     if lam.get("rotulo"):
-        etiqueta(img, M, y, lam["rotulo"].upper(), fondo=SELVA, color=PAPEL, punto=False, tam=26)
+        etiqueta(capa, M, y, lam["rotulo"].upper(), fondo=SELVA, color=PAPEL, punto=False, tam=26)
         y += 78
     if lam.get("dato"):
         tam = 210
         while madera(tam).getlength(lam["dato"]) > ancho and tam > 110:
             tam -= 10
-        m = Image.new("L", (W, H), 0)
+        m = Image.new("L", capa.size, 0)
         ImageDraw.Draw(m).text((M - tam * 0.03, y + tam * 0.8), lam["dato"], font=madera(tam), fill=255, anchor="ls")
-        estampar(img, m, ACENTO, 70 + n, desfase=(6, 5), opacidad=0.9, debajo_de=m)
-        estampar(img, m, SELVA, 71 + n)
+        estampar(capa, m, ACENTO, 70 + n, desfase=(6, 5), opacidad=0.9, debajo_de=m)
+        estampar(capa, m, SELVA, 71 + n)
         y += tam * 0.86
         if lam.get("dato_pie"):
-            y = texto(img, M, y + 6, lam["dato_pie"], 40, ancho, CARBON, peso=600) + 10
+            y = texto(capa, M, y + 6, lam["dato_pie"], 40, ancho, CARBON, peso=600) + 10
         y += 24
     if lam.get("titulo"):
-        y = dibujar_titular(img, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho, color=CARBON) + 26
+        y = dibujar_titular(capa, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho, color=CARBON) + 26
     if lam.get("texto"):
-        y = texto(img, M, y, lam["texto"], 40, ancho, CARBON) + 26
+        y = texto(capa, M, y, lam["texto"], 40, ancho, CARBON) + 26
     if lam.get("campos"):  # etiqueta de herbario: filas con filete, la etiqueta en mono y el valor en sans
-        d = ImageDraw.Draw(img)
+        d = ImageDraw.Draw(capa)
         fe, fv = dn.mono(20, True), dn.sans(36, 600, 88)
         col = 250
         d.line([(M, y), (M + ancho, y)], fill=CARBON, width=2)
@@ -723,6 +727,9 @@ def l_ficha(cfg, lam, n):
                 d.text((M + col, y + 46 + k * 42), linea, font=fv, fill=CARBON, anchor="ls")
             y += 66 + 42 * (len(lineas) - 1)
             d.line([(M, y), (M + ancho, y)], fill=(204, 194, 180), width=2)
+    libre = (H - B - 20) - y
+    baja = max(0, round(libre * 0.45)) if not lam.get("semitono") else 0
+    img.alpha_composite(capa.crop((0, -baja, W, H - baja)) if baja else capa.crop((0, 0, W, H)))
     if y > H - B - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto, los campos o quita la foto")
     pie(img, lam.get("credito", "").upper(), (95, 85, 76))
