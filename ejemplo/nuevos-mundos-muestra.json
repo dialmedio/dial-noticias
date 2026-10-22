@@ -1,0 +1,104 @@
+{
+  "seccion": "nuevos-mundos",
+  "salida": "salida",
+  "prefijo": "nuevos-mundos-muestra",
+  "meta": "COLOMBIA · 23 OCT 2026",
+  "laminas": [
+    {
+      "tipo": "portada",
+      "foto": "fuentes/autoridades.jpg",
+      "foco": [
+        0.82,
+        0.5
+      ],
+      "credito": "Foto: Fabiammoreno · CC BY-SA 4.0 · Jambaló (Cauca), 2018",
+      "titulo": "Las *buenas noticias* también son noticia",
+      "bajada": "Nueva línea de Al Aire: conservación, ciencia y comunidades que ya están cambiando las cosas."
+    },
+    {
+      "foto": "fuentes/musicos.jpg",
+      "foco": [
+        0.55,
+        0.5
+      ],
+      "meta": "CAUCA · 2018",
+      "credito": "Foto: muestra de diseño",
+      "rotulo": "Lo que ya funciona",
+      "titulo": "Saberes que cuidan",
+      "texto": "Comunidades que protegen el agua, el bosque y la semilla con lo que saben hacer."
+    },
+    {
+      "tipo": "texto",
+      "estilo": "ficha",
+      "semitono": "fuentes/autoridades.jpg",
+      "foco_semitono": [
+        0.8,
+        0.6
+      ],
+      "pie_foto": "Fig. 1 · Montañas de Jambaló, Cauca",
+      "rotulo": "Ficha de campo",
+      "dato": "2 veces",
+      "dato_pie": "por semana: los lunes y los jueves.",
+      "campos": [
+        [
+          "Qué",
+          "Conservación, biología, clima y soluciones"
+        ],
+        [
+          "Dónde",
+          "Colombia primero; el mundo si nos enseña algo"
+        ],
+        [
+          "Cómo",
+          "Con datos verificados y sus límites"
+        ]
+      ],
+      "credito": "Foto: Fabiammoreno · CC BY-SA 4.0"
+    },
+    {
+      "tipo": "texto",
+      "estilo": "pais",
+      "titulo": "Selva",
+      "rotulo": "Territorio",
+      "texto": "Colombia es uno de los países con más biodiversidad del planeta. Ahí hay noticias todos los días.",
+      "items": [
+        "Especies nuevas para la ciencia",
+        "Ríos y bosques que se recuperan",
+        "Economías que no destruyen"
+      ]
+    },
+    {
+      "tipo": "texto",
+      "estilo": "citas",
+      "rotulo": "Por qué esta línea",
+      "citas": [
+        {
+          "texto": "Contar lo que funciona también es periodismo: con datos, con sus límites y sin maquillaje verde.",
+          "autor": "Nuevos mundos posibles · Dial Medio"
+        }
+      ]
+    },
+    {
+      "tipo": "texto",
+      "estilo": "analisis",
+      "semitono": "fuentes/musicos.jpg",
+      "foco_semitono": [
+        0.55,
+        0.45
+      ],
+      "titulo": "Qué *buscamos*",
+      "items": [
+        "Que esté probado, no solo anunciado",
+        "Las voces de quienes lo hacen",
+        "Lo que falta y lo que puede fallar"
+      ],
+      "cierre": "Si suena demasiado bonito, lo verificamos dos veces.",
+      "credito": "Foto: muestra de diseño"
+    },
+    {
+      "tipo": "cta",
+      "pregunta": "¿Qué *buena noticia* de tu territorio deberíamos contar?",
+      "texto": "Escríbenos: la leemos y la verificamos."
+    }
+  ]
+}
