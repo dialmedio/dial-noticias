@@ -68,17 +68,42 @@ def dibujar_franja(img, r, x, y, lineas, franja):
                 posiciones.append((cx, base, w, ac, f.getlength(w)))
                 cx += f.getlength(w)
         yy += r.alto_linea
-    tramo = None  # una franja continua por cada tramo de palabras con acento en la misma línea
+    tramo, rects = None, []  # una franja continua por cada tramo de palabras con acento en la misma línea
     for cx, base, w, ac, ancho in posiciones + [(0, -1, "", False, 0)]:
         if ac and tramo and tramo[2] == base:
             tramo[1] = cx + ancho
         else:
             if tramo:
-                d.rectangle([tramo[0] - tam * 0.07, tramo[2] - tam * 0.72, tramo[1] + tam * 0.09, tramo[2] + tam * 0.2], fill=franja)
+                rects.append([tramo[0] - tam * 0.08, tramo[2] - tam * 0.72, tramo[1] + tam * 0.1, tramo[2] + tam * 0.2])
             tramo = [cx, cx + ancho, base] if ac else None
+    if rects:
+        franja_impresa(img, rects, franja, sum(map(ord, "".join(p[2] for p in posiciones))) % 997)
     for cx, base, w, ac, _ in posiciones:
         d.text((cx, base), w, font=r.fa if ac else r.f, fill=CARBON if ac else r.color, anchor="ls")
     return yy
+
+
+def franja_impresa(img, rects, color, semilla):
+    """Franjas con tinta de impresión: el borde muerde un poco, la tinta carga desigual y no hay
+    esquinas perfectas. Es lo que separa una franja impresa de un rectángulo de pantalla."""
+    x0 = int(max(0, min(r[0] for r in rects) - 12))
+    y0 = int(max(0, min(r[1] for r in rects) - 12))
+    x1 = int(min(img.width, max(r[2] for r in rects) + 12))
+    y1 = int(min(img.height, max(r[3] for r in rects) + 12))
+    w, h = x1 - x0, y1 - y0
+    if w < 4 or h < 4:
+        return
+    m = Image.new("L", (w, h), 0)
+    dm = ImageDraw.Draw(m)
+    for r in rects:
+        dm.rectangle([r[0] - x0, r[1] - y0, r[2] - x0, r[3] - y0], fill=255)
+    a = np.asarray(m.filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255
+    borde = 0.6 * aa.ruido_suave(w, h, semilla, 5, 5, 1.0) + 0.4 * aa.ruido_suave(w, h, semilla + 1, 30, 4, 1.0)
+    a = np.clip((a - 0.5 + borde * 0.09) * 9 + 0.5, 0, 1)
+    carga = 0.86 + 0.14 * np.clip(aa.ruido_suave(w, h, semilla + 2, 90, 14, 1.4) * 0.5 + 0.5, 0, 1)
+    capa = Image.new("RGBA", (w, h), color + (0,))
+    capa.putalpha(Image.fromarray((a * carga * 255).astype(np.uint8)))
+    img.alpha_composite(capa, (x0, y0))
 
 
 def alto_titular(contenido, tam, ancho, inter=1.0):
@@ -92,51 +117,47 @@ def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja=BRASA, inter=1
     return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja)
 
 
-def antetitulo(img, x, y, texto, color, hoja=None):
-    """Rótulo sin caja: una hoja y el texto en mono. y = línea base. Sobre fotos y verdes, el texto va
-    en papel y solo la hoja en brasa (la brasa en letra pequeña se pierde)."""
-    aa.hoja(img, x + 11, y - 9, 10, hoja or color)
-    ImageDraw.Draw(img).text((x + 30, y), texto.upper(), font=dn.mono(24, True), fill=color, anchor="ls")
+def espaciado(d, x, y, texto, f, fill, tracking=0.14, sombra=False):
+    """Texto en versalitas con espacio entre letras (PIL no lo trae). Devuelve el x final.
+    sombra: una sombra carbón de 2 px, para letra pequeña clara sobre fotos con zonas claras."""
+    if sombra:
+        espaciado(d, x + 1.5, y + 1.5, texto, f, CARBON + (170,), tracking)
+    for ch in texto:
+        d.text((x, y), ch, font=f, fill=fill, anchor="ls")
+        x += f.getlength(ch) + f.size * tracking
+    return x
 
 
-def caja(img, x, y, texto, fondo, color, tam=26, hoja=None):
-    """Caja mono como las de Al Aire (sello y acciones del cierre). Devuelve el borde derecho."""
-    f = dn.mono(tam, medio=True)
-    pad = tam * 0.55
-    tx = x + pad + (tam * 1.05 if hoja else 0)
-    w = f.getlength(texto) + (tx - x) + pad
-    ImageDraw.Draw(img).rectangle([x, y, x + w, y + tam * 1.7], fill=fondo)
-    if hoja:
-        aa.hoja(img, x + pad + tam * 0.36, y + tam * 0.85, tam * 0.36, hoja)
-    ImageDraw.Draw(img).text((tx, y + tam * 1.2), texto, font=f, fill=color, anchor="ls")
-    return x + w
+def antetitulo(img, x, y, texto, color, hoja=None, sombra=False):
+    """Antetítulo como en prensa: una hoja y el texto en sans espaciada, sin caja. y = línea base.
+    Sobre fotos y verdes, el texto va en papel y solo la hoja en brasa."""
+    aa.hoja(img, x + 10, y - 8, 10, hoja or color)
+    espaciado(ImageDraw.Draw(img), x + 28, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
 
 
 def cabecera(img, meta, fondo="foto"):
-    """fondo: "foto", "claro" (papel) u "oscuro" (eucalipto). Sello eucalipto con la hoja brasa."""
-    W, H, M, T = g("W"), g("H"), g("M"), g("T")
+    """Cabecera de sección, como la de un periódico (22 oct 2026: las cajas se veían "muy digitales"):
+    la hoja brasa y "Nuevos mundos posibles" en serif cursiva, el logo a la derecha, un filete fino
+    a todo el ancho y debajo la fecha en versalitas. fondo: "foto", "claro" (papel) u "oscuro" (verdes)."""
+    W, H, M, T, R = g("W"), g("H"), g("M"), g("T"), g("R")
     if fondo == "foto":
-        img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 150) / H, fuerza=0.5))
-    sello_fondo = PAPEL if fondo == "oscuro" else EUCALIPTO
-    sello_tinta = EUCALIPTO_HONDO if fondo == "oscuro" else PAPEL
-    fin = caja(img, M, T, SELLO, sello_fondo, sello_tinta, tam=26, hoja=BRASA)
-    lg = dn.logo(38)
+        img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 230) / H, fuerza=0.8))
+    tinta = CARBON if fondo == "claro" else PAPEL
+    d = ImageDraw.Draw(img)
+    aa.hoja(img, M + 12, T + 19, 12, BRASA)
+    d.text((M + 34, T + 33), "Nuevos mundos posibles", font=cursiva(40), fill=tinta, anchor="ls")
+    lg = dn.logo(36)
     if fondo == "claro":
         a = np.asarray(lg).copy()
         claro = a[..., 0] > 200
         a[claro, :3] = CARBON
         a[~claro & (a[..., 3] > 0), :3] = TERRACOTA
         lg = Image.fromarray(a)
-    fm = dn.mono(22)
-    x, y = fin + 16, T + 26 * 1.2
-    if x + fm.getlength(meta) > W - M - lg.width - 16:  # el sello es largo: la fecha baja
-        x, y = M, T + 26 * 1.7 + 34
-    if fondo == "foto":  # sobre cielos y paredes claras, la fecha va en caja carbón
-        x = x if x == M else x - 16
-        ImageDraw.Draw(img).rectangle([x, y - 27, x + fm.getlength(meta) + 28, y + 11], fill=CARBON)
-        x += 14
-    ImageDraw.Draw(img).text((x, y), meta, font=fm, fill=(CARBON if fondo == "claro" else PAPEL) + (225,), anchor="ls")
-    img.alpha_composite(lg, (W - M - lg.width, T + 2))
+    img.alpha_composite(lg, (W - M - R - lg.width, T + 2))
+    filete = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(filete).line([(M, T + 54), (W - M - R, T + 54)], fill=tinta + (150,), width=2)
+    img.alpha_composite(filete)
+    espaciado(d, M, T + 88, meta.upper(), dn.sans(19, 600, 100), tinta + (235,), sombra=fondo == "foto")
 
 
 def pie(img, contenido, color):
@@ -161,6 +182,18 @@ def riso(foto, tam, foco=(0.5, 0.5), fondo=PAPEL, tinta1=EUCALIPTO, tinta2=BRASA
     return Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
 
 
+def banda(cfg, lam, tam):
+    """La foto de la banda de arriba (fichas y lugares): a color, con la misma colorización de las fotos,
+    o en riso de dos tintas si la lámina dice "riso": true. Martín, 22 oct: la Amazonía en riso "parecía
+    una mancha"; la banda tiene que leerse a primera vista."""
+    ruta = cfg["_base"] / lam["semitono"]
+    foco = tuple(lam.get("foco_semitono", (0.5, 0.5)))
+    if lam.get("riso"):
+        return riso(Image.open(ruta).convert("RGB"), tam, foco)
+    foto = dn.preparar_foto(ruta, lam.get("ajuste"), f"{tam[0]}:{tam[1]}", foco)
+    return foto.resize(tam, Image.LANCZOS).convert("RGBA")
+
+
 # ------------------------------------------------------------ láminas
 
 def l_portada(cfg, lam, n):
@@ -172,11 +205,11 @@ def l_portada(cfg, lam, n):
     alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (26 + aa.alto_texto(baj, 38, ancho - 40) if baj else 0)
     y = H - B - alto
     # el degradado arranca un poco antes del texto, por alto que sea el bloque (cielos claros)
-    img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 420) / H), fuerza=0.75))  # velo largo
+    img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 480) / H), fuerza=0.85))  # velo largo
     aa.degradado_bajo(img, max(0.12, (y - 150) / H), 0.97)
     cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
-        antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA)
+        antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA, sombra=True)
     y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98)
     if baj:
         aa.texto(img, M, y + 26, baj, 38, ancho - 40, PAPEL + (235,))
@@ -198,7 +231,7 @@ def l_foto(cfg, lam, n):
         aa.degradado_bajo(img, max(0.2, (y - 170) / H), 0.92)
     cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
-        antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA)
+        antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA, sombra=True)
     if tt:
         y = titular(img, M, y, tt, 92, ancho) + 16
     aa.texto(img, M, y, tx, 40, ancho, PAPEL + (240,))
@@ -222,8 +255,7 @@ def l_ficha(cfg, lam, n):
     con_foto = bool(lam.get("semitono"))
     if con_foto:
         alto_foto = round(H * lam.get("alto_foto", 0.4))
-        foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
-        img.alpha_composite(riso(foto, (W, alto_foto), tuple(lam.get("foco_semitono", (0.5, 0.5)))), (0, 0))
+        img.alpha_composite(banda(cfg, lam, (W, alto_foto)), (0, 0))
         y = alto_foto + 56
         if lam.get("pie_foto"):
             ImageDraw.Draw(img).text((M, alto_foto + 34), lam["pie_foto"].upper(), font=dn.mono(18), fill=GRIS, anchor="ls")
@@ -248,12 +280,12 @@ def l_ficha(cfg, lam, n):
     if lam.get("texto"):
         y = aa.texto(capa, M, y, lam["texto"], 38, ancho, CARBON) + 22
     if lam.get("campos"):
-        fe, fv = dn.mono(20, True), serif(40)
+        fe, fv = dn.sans(18, 650, 100), serif(40)
         col = 260
         for etq, valor in lam["campos"]:
             lineas = aa.partir(valor, fv, ancho - col)
             d.line([(M, y), (M + ancho, y)], fill=SALVIA, width=2)
-            d.text((M, y + 44), etq.upper(), font=fe, fill=EUCALIPTO, anchor="ls")
+            espaciado(d, M, y + 44, etq.upper(), fe, EUCALIPTO)
             for k, linea in enumerate(lineas):
                 d.text((M + col, y + 46 + k * 44), linea, font=fv, fill=CARBON, anchor="ls")
             y += 66 + 44 * (len(lineas) - 1)
@@ -321,12 +353,11 @@ def l_serie(cfg, lam, n):
         x = M + col
         for k, nombre in enumerate(grupos):
             d.rectangle([x, y + 4, x + 22, y + 26], fill=tonos[k % 2])
-            d.text((x + 32, y + 24), nombre.upper(), font=dn.mono(20, True), fill=CARBON, anchor="ls")
-            x += 32 + dn.mono(20, True).getlength(nombre.upper()) + 36
+            x = espaciado(d, x + 32, y + 24, nombre.upper(), dn.sans(18, 650, 100), CARBON) + 30
         y += 40
     if lam.get("unidad"):
-        for k, linea in enumerate(aa.partir(lam["unidad"].upper(), dn.mono(20), ancho - col)):
-            d.text((M + col, y + 20 + k * 28), linea, font=dn.mono(20), fill=GRIS, anchor="ls")
+        for k, linea in enumerate(aa.partir(lam["unidad"], dn.sans(22, 500, 96), ancho - col)):
+            d.text((M + col, y + 22 + k * 30), linea, font=dn.sans(22, 500, 96), fill=GRIS, anchor="ls")
     pie(img, lam.get("credito", ""), GRIS)
     return img
 
@@ -338,11 +369,11 @@ def l_citas(cfg, lam, n):
     cabecera(img, (lam.get("rotulo") or lam.get("meta", cfg["meta"])).upper(), "claro")
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R - 90
-    fa = dn.mono(21, True)
+    fa = dn.sans(23, 600, 96)
     bloques = []
     for c in lam["citas"]:
         r = rico_serif(c["texto"], 60, CARBON, 1.08)
-        bloques.append((r, r.lineas(ancho), aa.partir(c["autor"].upper(), fa, ancho)))
+        bloques.append((r, r.lineas(ancho), aa.partir(c["autor"], fa, ancho)))
     total = sum(r.alto(l) + 30 + 30 * len(a) for r, l, a in bloques) + 90 * (len(bloques) - 1)
     y = T + 120 + (H - T - 120 - B - total) / 2
     for k, (r, l, autor) in enumerate(bloques):
@@ -368,8 +399,7 @@ def l_lugar(cfg, lam, n):
     y = T + 150 if lam.get("semitono") else T + 280  # sin foto, el bloque baja hacia el centro
     if lam.get("semitono"):
         alto_foto = round(H * 0.27)
-        foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
-        img.alpha_composite(riso(foto, (W, alto_foto), tuple(lam.get("foco_semitono", (0.5, 0.5))), fondo=HUESO), (0, 0))
+        img.alpha_composite(banda(cfg, lam, (W, alto_foto)), (0, 0))
         y = alto_foto + 30
     cabecera(img, lam.get("meta", cfg["meta"]), "foto" if lam.get("semitono") else "oscuro")
     d = ImageDraw.Draw(img)
@@ -438,21 +468,22 @@ def l_dos(cfg, lam, n):
     "personas": [{"foto", "foco", "nombre", "cargo", "credito"}, {...}]"""
     W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
     img = aa.campo(EUCALIPTO, 60 + n, 0.03)
-    alto = round(H * lam.get("alto_fotos", 0.64))
+    arriba = g("T") + 112  # franja de la cabecera: las fotos empiezan debajo, para no tapar caras
+    alto = round(H * lam.get("alto_fotos", 0.52))
     medio = 6
     an = (W - medio) // 2
-    fn, fc = serif(50), dn.mono(19, True)
+    fn, fc = serif(50), dn.sans(17, 650, 100)
     for k, p in enumerate(lam["personas"]):
         foto = dn.preparar_foto(cfg["_base"] / p["foto"], p.get("ajuste"), f"{an}:{alto}", p.get("foco")).convert("RGBA")
         foto = foto.resize((an, alto), Image.LANCZOS)
         foto.alpha_composite(dn.degradado_inferior(an, alto, desde=0.55, fuerza=0.85))
         dd = ImageDraw.Draw(foto)
         dd.text((M * 0.6, alto - 64), p["nombre"], font=fn, fill=PAPEL, anchor="ls")
-        dd.text((M * 0.6, alto - 30), p.get("cargo", "").upper(), font=fc, fill=PAPEL + (220,), anchor="ls")
-        img.alpha_composite(foto, (k * (an + medio), 0))
-    cabecera(img, lam.get("meta", cfg["meta"]))
+        espaciado(dd, M * 0.6, alto - 30, p.get("cargo", "").upper(), fc, PAPEL + (225,))
+        img.alpha_composite(foto, (k * (an + medio), arriba))
+    cabecera(img, lam.get("meta", cfg["meta"]), "oscuro")
     ancho = W - 2 * M - R
-    y = alto + 48
+    y = arriba + alto + 44
     if lam.get("rotulo"):
         antetitulo(img, M, y + 4, lam["rotulo"], PAPEL, BRASA)
         y += 40
@@ -484,9 +515,13 @@ def l_cta(cfg, lam, n):
     y = titular(img, M, y, pregunta, tam, ancho)
     if texto_:
         aa.texto(img, M, y + 26, texto_, 38, ancho, PAPEL + (225,))
-    x = M
+    fa = dn.sans(24, 650, 100)
+    aa.hoja(img, M + 11, y_pie + 22, 11, BRASA)
+    x = M + 32
     for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
-        x = caja(img, x, y_pie, palabra, BRASA if k == 0 else PAPEL, CARBON, 26, hoja=CARBON if k == 0 else None) + 10
+        if k:
+            x = espaciado(d, x + 4, y_pie + 32, "·", fa, PAPEL + (160,)) + 6
+        x = espaciado(d, x, y_pie + 32, palabra, fa, BRASA if k == 0 else PAPEL)
     lg = dn.logo(64)
     img.alpha_composite(lg, (M, round(y_pie + 84)))
     d = ImageDraw.Draw(img)
