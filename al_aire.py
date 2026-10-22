@@ -8,6 +8,7 @@ de Al Aire (el manual ya la reserva para los estados "en vivo").
 La línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py, que usa
 las piezas de este archivo (cabecera, textos, fotos, hoja) con su propio estilo.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -391,7 +392,7 @@ def rotulo_persona(img, persona):
 def partir(texto_, fuente, ancho):
     """Corta un texto en líneas que caben en `ancho` (nada se sale del cuadro)."""
     lineas, act = [], ""
-    for w in texto_.split():
+    for w in (w for w in re.split(r"[ \t\r\n]+", texto_) if w):  # el espacio duro (U+00A0) no parte
         prueba = (act + " " + w).strip()
         if act and fuente.getlength(prueba) > ancho:
             lineas.append(act)

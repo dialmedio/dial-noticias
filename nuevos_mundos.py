@@ -43,20 +43,53 @@ def cursiva(tam):
     return dn.fuente("InstrumentSerif-Italic.ttf", tam)
 
 
-def rico_serif(contenido, tam, color, acento, inter=1.0):
-    r = dn.Rico(contenido, tam, color=color, acento=acento, interlineado=inter)
+def rico_serif(contenido, tam, color, inter=1.0):
+    r = dn.Rico(contenido, tam, color=color, acento=CARBON, interlineado=inter)
     r.f, r.fa = serif(tam), cursiva(tam)
     return r
 
 
+def dibujar_franja(img, r, x, y, lineas, franja):
+    """Como Rico.dibujar, pero el acento (*así*) va en cursiva carbón sobre una franja (22 oct 2026:
+    la cursiva naranja sola no siempre se leía). Primero se pintan todas las franjas y después todo
+    el texto, para que las letras que bajan de la línea de arriba no queden tapadas."""
+    d = ImageDraw.Draw(img)
+    asc = r.f.getmetrics()[0]
+    tam = r.tam
+    posiciones = []  # (x, base, palabra, acento)
+    yy = y
+    for l in lineas:
+        cx, base = x, yy + asc
+        for i, tok in enumerate(l):
+            if i:
+                cx += r._esp(tok[0][1])
+            for w, ac in tok:
+                f = r.fa if ac else r.f
+                posiciones.append((cx, base, w, ac, f.getlength(w)))
+                cx += f.getlength(w)
+        yy += r.alto_linea
+    tramo = None  # una franja continua por cada tramo de palabras con acento en la misma línea
+    for cx, base, w, ac, ancho in posiciones + [(0, -1, "", False, 0)]:
+        if ac and tramo and tramo[2] == base:
+            tramo[1] = cx + ancho
+        else:
+            if tramo:
+                d.rectangle([tramo[0] - tam * 0.07, tramo[2] - tam * 0.72, tramo[1] + tam * 0.09, tramo[2] + tam * 0.2], fill=franja)
+            tramo = [cx, cx + ancho, base] if ac else None
+    for cx, base, w, ac, _ in posiciones:
+        d.text((cx, base), w, font=r.fa if ac else r.f, fill=CARBON if ac else r.color, anchor="ls")
+    return yy
+
+
 def alto_titular(contenido, tam, ancho, inter=1.0):
-    r = rico_serif(contenido, tam, PAPEL, BRASA, inter)
+    r = rico_serif(contenido, tam, PAPEL, inter)
     return r.alto(r.equilibradas(ancho))
 
 
-def titular(img, x, y, contenido, tam, ancho, color=PAPEL, acento=BRASA, inter=1.0):
-    r = rico_serif(contenido, tam, color, acento, inter)
-    return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
+def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja=BRASA, inter=1.0):
+    """Titular en serif con el acento sobre franja: brasa sobre fotos y verdes, salvia sobre papel."""
+    r = rico_serif(contenido, tam, color, inter)
+    return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja)
 
 
 def antetitulo(img, x, y, texto, color, hoja=None):
@@ -133,13 +166,15 @@ def riso(foto, tam, foco=(0.5, 0.5), fondo=PAPEL, tinta1=EUCALIPTO, tinta2=BRASA
 def l_portada(cfg, lam, n):
     W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
     img = aa.foto_base(cfg, lam)
-    aa.degradado_bajo(img, 0.36 if B < 200 else 0.3, 0.95)
-    cabecera(img, lam.get("meta", cfg["meta"]))
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tam = 116 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
     alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (26 + aa.alto_texto(baj, 38, ancho - 40) if baj else 0)
     y = H - B - alto
+    # el degradado arranca un poco antes del texto, por alto que sea el bloque (cielos claros)
+    img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 420) / H), fuerza=0.75))  # velo largo
+    aa.degradado_bajo(img, max(0.12, (y - 150) / H), 0.97)
+    cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
         antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA)
     y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98)
@@ -155,13 +190,13 @@ def l_foto(cfg, lam, n):
     arriba = lam.get("posicion") == "arriba"
     if arriba:
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.58, fuerza=0.86))
-    else:
-        aa.degradado_bajo(img, 0.46 if B < 200 else 0.4, 0.9)
-    cabecera(img, lam.get("meta", cfg["meta"]))
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tx, tt = lam.get("texto", ""), lam.get("titulo", "")
     alto = (alto_titular(tt, 92, ancho) + 16 if tt else 0) + aa.alto_texto(tx, 40, ancho)
     y = H - B - alto if not arriba else T + 200
+    if not arriba:
+        aa.degradado_bajo(img, max(0.2, (y - 170) / H), 0.92)
+    cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
         antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA)
     if tt:
@@ -206,7 +241,7 @@ def l_ficha(cfg, lam, n):
             y = aa.texto(capa, M, y + 4, lam["dato_pie"], 38, ancho, CARBON, peso=600) + 10
         y += 22
     if lam.get("titulo"):
-        y = titular(capa, M, y, lam["titulo"], 84 * lam.get("escala", 1.0), ancho, color=CARBON, acento=TERRACOTA) + 22
+        y = titular(capa, M, y, lam["titulo"], 84 * lam.get("escala", 1.0), ancho, color=CARBON, franja=SALVIA) + 22
     if lam.get("texto"):
         y = aa.texto(capa, M, y, lam["texto"], 38, ancho, CARBON) + 22
     if lam.get("campos"):
@@ -236,14 +271,16 @@ def l_ficha(cfg, lam, n):
     img.alpha_composite(capa.crop((0, -baja, W, H - baja)))
     if y > H - B - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o los campos")
-    cabecera(img, lam.get("meta", cfg["meta"]), "claro")
+    cabecera(img, lam.get("meta", cfg["meta"]), "foto" if con_foto else "claro")
     pie(img, lam.get("credito", ""), GRIS)
     return img
 
 
 def l_serie(cfg, lam, n):
     """Una serie en barras horizontales: "serie": [["2021", 13038], ...]; la última barra va en brasa.
-    Con rotulo, dato (el cambio, p. ej. "−74 %") y dato_pie arriba."""
+    Con rotulo, dato (el cambio, p. ej. "−74 %") y dato_pie arriba. Para comparar periodos (gobiernos),
+    cada fila lleva un tercer valor con su grupo y "grupos" da los nombres en orden: el primero va en
+    hueso oscuro y el segundo en salvia, con una leyenda debajo."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
     img = aa.campo(PAPEL, 55 + n, 0.025)
     cabecera(img, lam.get("meta", cfg["meta"]), "claro")
@@ -260,21 +297,33 @@ def l_serie(cfg, lam, n):
     if lam.get("dato_pie"):
         y = aa.texto(img, M, y, lam["dato_pie"], 38, ancho, CARBON, peso=600) + 40
     serie = lam["serie"]
-    tope = max(v for _, v in serie)
+    tope = max(fila[1] for fila in serie)
+    grupos = lam.get("grupos", [])
+    tonos = [(204, 194, 180), SALVIA]
     fe, fv = dn.mono(24, True), dn.sans(32, 600, 88)
-    col, alto_barra, paso = 110, 46, 70
+    col, alto_barra, paso = 110, 46, (70 if len(serie) <= 6 else 62)
     largo = ancho - col - 150
-    for k, (etq, v) in enumerate(serie):
+    for k, fila in enumerate(serie):
+        etq, v = fila[0], fila[1]
         ultima = k == len(serie) - 1
+        tono = tonos[grupos.index(fila[2]) % 2] if len(fila) > 2 and fila[2] in grupos else SALVIA
         w = max(6, largo * v / tope)
         cy = y + k * paso
         d.text((M, cy + alto_barra * 0.72), str(etq), font=fe, fill=GRIS, anchor="ls")
-        d.rectangle([M + col, cy, M + col + w, cy + alto_barra], fill=BRASA if ultima else SALVIA)
+        d.rectangle([M + col, cy, M + col + w, cy + alto_barra], fill=BRASA if ultima else tono)
         d.text((M + col + w + 16, cy + alto_barra * 0.74), f"{v:,}".replace(",", "."), font=fv,
                fill=CARBON if ultima else GRIS, anchor="ls")
     y += paso * len(serie)
+    if grupos:
+        x = M + col
+        for k, nombre in enumerate(grupos):
+            d.rectangle([x, y + 4, x + 22, y + 26], fill=tonos[k % 2])
+            d.text((x + 32, y + 24), nombre.upper(), font=dn.mono(20, True), fill=CARBON, anchor="ls")
+            x += 32 + dn.mono(20, True).getlength(nombre.upper()) + 36
+        y += 40
     if lam.get("unidad"):
-        d.text((M + col, y + 20), lam["unidad"].upper(), font=dn.mono(20), fill=GRIS, anchor="ls")
+        for k, linea in enumerate(aa.partir(lam["unidad"].upper(), dn.mono(20), ancho - col)):
+            d.text((M + col, y + 20 + k * 28), linea, font=dn.mono(20), fill=GRIS, anchor="ls")
     pie(img, lam.get("credito", ""), GRIS)
     return img
 
@@ -289,13 +338,13 @@ def l_citas(cfg, lam, n):
     fa = dn.mono(21, True)
     bloques = []
     for c in lam["citas"]:
-        r = rico_serif(c["texto"], 60, CARBON, TERRACOTA, 1.08)
+        r = rico_serif(c["texto"], 60, CARBON, 1.08)
         bloques.append((r, r.lineas(ancho), aa.partir(c["autor"].upper(), fa, ancho)))
     total = sum(r.alto(l) + 30 + 30 * len(a) for r, l, a in bloques) + 90 * (len(bloques) - 1)
     y = T + 120 + (H - T - 120 - B - total) / 2
     for k, (r, l, autor) in enumerate(bloques):
         d.text((M - 6, y + 150), "“", font=serif(230), fill=BRASA, anchor="ls")
-        y = r.dibujar(d, M + 90, y, l) + 30
+        y = dibujar_franja(img, r, M + 90, y, l, SALVIA) + 30
         for linea in autor:
             d.text((M + 90, y + 10), linea, font=fa, fill=EUCALIPTO, anchor="ls")
             y += 30
@@ -319,7 +368,7 @@ def l_lugar(cfg, lam, n):
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         img.alpha_composite(riso(foto, (W, alto_foto), tuple(lam.get("foco_semitono", (0.5, 0.5))), fondo=HUESO), (0, 0))
         y = alto_foto + 30
-    cabecera(img, lam.get("meta", cfg["meta"]), "claro" if lam.get("semitono") else "oscuro")
+    cabecera(img, lam.get("meta", cfg["meta"]), "foto" if lam.get("semitono") else "oscuro")
     d = ImageDraw.Draw(img)
     tam = 230
     while cursiva(tam).getlength(lam["titulo"]) > ancho and tam > 100:

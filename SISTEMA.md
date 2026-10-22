@@ -32,7 +32,7 @@ Buenas noticias: conservación, ciencia y biología, clima, comunidades y econom
 
 La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Martín el 22 oct: "muy predecible y los cuadros no funcionan". Pidió suavidad, elegancia, un toque de sutileza, coherente con Dial y con **el verde y el naranja juntos**. Referentes: The Guardian, La Linterna y Mutante.
 
-- **Titulares en Instrument Serif** (la serif de Dial), con el acento en cursiva: brasa sobre foto o verde, terracota sobre papel.
+- **Titulares en Instrument Serif** (la serif de Dial). El acento (`*así*`) va en cursiva carbón **sobre una franja**: brasa sobre fotos y verdes, salvia sobre papel (22 oct: la cursiva naranja sola no siempre se leía). Las franjas se pintan antes que el texto, para no tapar las letras de la línea de arriba. Lo mismo en las citas.
 - **Color:** eucalipto `#56705E` (verde suave, hacia el gris) y brasa `#E58A3A`; eucalipto hondo `#2C3E32` en el cierre; papel y hueso de Dial en las láminas de datos y de citas; salvia `#C8D3BE` para barras y filetes. Nada de cuadrícula ni de tablas con bordes.
 - **Sello:** caja eucalipto `NUEVOS MUNDOS POSIBLES` con una hoja brasa. La fecha va al lado o debajo; sobre foto, en caja carbón.
 - **Rótulos sin caja:** una hoja brasa y el texto en mono (papel sobre fotos y verdes, eucalipto sobre papel), como los antetítulos del Guardian.
@@ -41,12 +41,13 @@ La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Mart
 - **Estilos** (`"estilo"`; si no se pone, se deduce):
   - `portada` y fotos interiores: como en Al Aire, con el titular en serif y `rotulo` como antetítulo.
   - `ficha` (`"tipo": "texto"`): papel con, en orden y todo opcional, la banda en riso (`semitono`, `foco_semitono`, `pie_foto`), `rotulo`, el **dato** grande en serif eucalipto, `dato_pie`, `titulo`, `texto`, `campos` `[[etiqueta, valor]]` en lista con filetes, `items` numerados en cursiva y `cierre` con filete brasa. Sin foto, el contenido se centra (sirve de portada cuando no hay fotos). También hace las veces de `analisis`.
-  - `serie`: el cambio grande (`dato`, p. ej. "−74 %"), `dato_pie` y barras horizontales: `"serie": [["2021", 13038], …]`, `"unidad"`. La última barra va en brasa.
+  - `serie`: el cambio grande (`dato`, p. ej. "−74 %"), `dato_pie` y barras horizontales: `"serie": [["2021", 13038], …]`, `"unidad"`. La última barra va en brasa. Para comparar periodos (p. ej. gobiernos), cada fila lleva un tercer valor con su grupo y `"grupos"` da los dos nombres en orden (hueso oscuro y salvia, con leyenda).
   - `lugar` (o `pais`): campo eucalipto con el nombre en serif cursiva grande, `rotulo`, `texto` e `items`; opcional, banda en riso arriba.
   - `citas`: hueso, comillas grandes en brasa, la cita en serif (el acento con `*…*`) y el autor en mono eucalipto.
   - `dos`: dos personas con el mismo trato (p. ej. los candidatos de una elección): retratos del mismo tamaño lado a lado, nombre y cargo en cada uno, y abajo la banda eucalipto con `rotulo`, `titulo` y `texto`. `"personas": [{"foto", "foco", "nombre", "cargo"}, …]`. Orden neutral (alfabético por apellido) y la misma medida en las dos descripciones.
   - `cta`: eucalipto hondo, el signo en cursiva brasa, la pregunta en serif y la firma.
 - **Criterio:** que esté probado, no solo anunciado; los límites van en la pieza (una lámina de "lo que falta"); sin maquillaje verde (nunca solo el comunicado de una empresa o un gobierno sobre sus logros). Ciencia: nombre común y científico, y "especie nueva" solo si está descrita formalmente.
+- **Noticias con elecciones (Martín, 22 oct):** la elección puede ser el eje de la pieza. Se cuenta con datos por gobierno (oficiales y atribuidos), los planes de los dos candidatos con la misma medida, sus frases textuales y las advertencias atribuidas a quien las hace; si sirve, el contexto de la región. Dial no pone el calificativo: lo sostienen los datos.
 - **Mensajes de Martín:** si pide una dedicatoria o un mensaje, se escribe con palabras propias de Dial a partir de su idea, no copiando literal su nota (22 oct).
 - **Fotos de especies:** también de iNaturalist, solo CC0, CC BY o CC BY-SA (nunca NC ni ND), con las mismas reglas de 3c.
 - **Descripción:** `📍 Cómo funciona` cuando no hay versión del Gobierno, y siempre `📍 Lo que falta`. Hashtags con `#NuevosMundosPosibles` y `#DialMedio` al final.
@@ -80,6 +81,7 @@ La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Mart
 - **Formato: todo en vertical 4:5 (1080 × 1350) y todas las láminas iguales.** Lo decidió Martín el 18 oct 2026: en horizontal se veían muy pequeñas en el celular, y 4:5 es lo más grande que Instagram muestra en el feed. El generador lo aplica solo si el JSON no trae `formato`. Si la pieza es **un solo video**, el defecto es 9:16 (reel / TikTok). Solo se usa otro formato si Martín lo pide (`"formato": "9:16"`, `"1:1"` o `"original"`).
 - **Recorte (lo más importante de cada lámina):** de una foto horizontal, 4:5 se queda con el 45 % del ancho. Por cada foto se decide qué es lo esencial (la persona, el cartel, el gesto, el contraste entre dos grupos) y se pone `"foco": [x, 0.5]`, con `x` = el centro horizontal de eso en fracciones de la foto original (p. ej. `0.57`). Hay que comprobar que el recorte no corte el texto de un cartel ni una cara.
 - **Cuando el texto taparía lo esencial:** si el cartel o la persona están abajo, `"posicion": "arriba"` sube el bloque de texto bajo el logo (con degradado arriba). Si están a la derecha, `"ancho": 0.42` deja el texto en una columna a la izquierda.
+- **Cifras que no se parten:** entre el número y su unidad va un espacio duro (U+00A0): `5,2 %`, `24.648 kilómetros`. El generador no corta ahí.
 - **La letra no tiene ² ni ³:** se escribe "kilómetros cuadrados" (o se pone la unidad en el texto de apoyo), nunca "km²".
 - Límites de texto (en caracteres, con espacios):
   - Título: hasta 90. Lleva 1 a 3 palabras de acento entre asteriscos (`*danza y carteles*`), que salen sobre la franja brasa. El acento es la idea central del enfoque, no un adorno.

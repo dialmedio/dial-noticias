@@ -150,7 +150,7 @@ def _tokens(texto):
     """'Con *danza y carteles*, cientos' -> [(palabra, acento)]"""
     out, previo = [], " "
     for i, trozo in enumerate(re.split(r"\*", texto)):
-        for j, w in enumerate(trozo.split()):
+        for j, w in enumerate(w for w in re.split(r"[ \t\r\n]+", trozo) if w):  # el espacio duro (U+00A0) no parte
             pegado = j == 0 and out and not trozo[:1].isspace() and not previo[-1:].isspace()
             if pegado:  # puntuación pegada a un acento: "*carteles*," -> sin espacio
                 out[-1] = out[-1] + [(w, i % 2 == 1)]
