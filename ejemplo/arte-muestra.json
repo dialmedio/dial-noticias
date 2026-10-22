@@ -1,0 +1,60 @@
+{
+  "seccion": "arte",
+  "salida": "salida",
+  "prefijo": "arte-muestra",
+  "meta": "COLOMBIA · 1915–2026",
+  "laminas": [
+    {
+      "tipo": "portada",
+      "foto": "fuentes/planton-6.webp",
+      "foco": [0.37, 0.5],
+      "rotulo": "Nueva línea de Al Aire",
+      "credito": "Foto: Martín Perea / Dial Medio · Bogotá, 17 oct 2026",
+      "titulo": "El arte también *cuenta* la historia",
+      "bajada": "Cada martes, una obra, una canción o una foto que nació de un momento político y lo guardó en la memoria."
+    },
+    {
+      "obra": "fuentes/quintin-1915.jpg",
+      "meta": "EL COFRE, CAUCA · 1915",
+      "rotulo": "La obra completa",
+      "cartela": {"titulo": "Manuel Quintín Lame detenido", "autor": "Autor desconocido", "fecha": "1915", "tecnica": "Fotografía", "lugar": "El Cofre (Cauca) · Dominio público"},
+      "texto": "Las obras y las fotos de archivo van enteras, sin recorte ni cambio de color, con su cartela.",
+      "credito": "Foto: autor desconocido · Dominio público · El Cofre (Cauca), 1915"
+    },
+    {
+      "copias": [{"foto": "fuentes/planton-10.webp"}, {"foto": "fuentes/musicos.jpg"}, {"foto": "fuentes/museo.jpg"}],
+      "meta": "BOGOTÁ Y CAUCA · 2018–2026",
+      "rotulo": "Copias sobre la mesa",
+      "titulo": "Varias fotos, *una* historia",
+      "texto": "Dos o tres imágenes juntas, como copias sueltas del cuarto oscuro.",
+      "credito": "Fotos: Martín Perea / Dial Medio · Commons (CC BY-SA)"
+    },
+    {
+      "estilo": "epoca",
+      "dato": "1915",
+      "rotulo": "La época",
+      "titulo": "Un año *grande* para situar la historia",
+      "texto": "O una línea de tiempo, con años en cursiva y textos que se entienden solos:",
+      "tiempo": [["1915", "Detienen a Quintín Lame en El Cofre, Cauca."], ["1971", "Nace el Consejo Regional Indígena del Cauca (CRIC)."], ["2026", "Un patio del Palacio de San Carlos lleva su nombre."]]
+    },
+    {
+      "foto": "fuentes/musicos.jpg",
+      "foco": [0.72, 0.5],
+      "meta": "JAMBALÓ, CAUCA · 2018",
+      "rotulo": "A sangre",
+      "titulo": "La foto *manda*",
+      "texto": "Las fotos de lugares y personas van a sangre, con un revelado más hondo y cálido.",
+      "credito": "Foto: Fabiammoreno · CC BY-SA 4.0 · Jambaló (Cauca), 2018"
+    },
+    {
+      "tipo": "texto",
+      "citas": [{"texto": "Una obra guarda lo que *un país* quiso olvidar.", "autor": "Dial Medio · texto de muestra"}],
+      "rotulo": "La voz del artista"
+    },
+    {
+      "tipo": "cta",
+      "pregunta": "¿Qué *obra* guarda la memoria de tu territorio?",
+      "texto": "Cuéntanos en los comentarios: una canción, una foto, un mural, un objeto."
+    }
+  ]
+}

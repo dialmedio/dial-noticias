@@ -55,6 +55,29 @@ La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Mart
 - **Descripción:** `📍 Cómo funciona` cuando no hay versión del Gobierno, y siempre `📍 Lo que falta`. Hashtags con `#NuevosMundosPosibles` y `#DialMedio` al final.
 - Ejemplos: `ejemplo/nuevos-mundos-muestra.json` (muestra de diseño, sin noticia real).
 
+## Línea Arte y memoria (v1, 22 oct 2026; nombre provisional)
+
+El arte como parte de un proceso histórico, político o simbólico: fotografía, música, pintura, grabado, escultura, patrimonio y artes híbridas. Línea propia de Al Aire, con corrida de propuestas los martes (mesa y criterio en `D:/Claude Code/dial-arte/`). Se activa con `"seccion": "arte"`; la dibuja `arte.py`, con la misma estructura de Al Aire (cabecera, logo, crédito abajo, lámina final de pregunta). El nombre ("Arte y memoria") lo decide Martín: se cambia en la constante `NOMBRE`.
+
+Martín pidió un diseño "más inspirado para mostrar fotografía", con un tinte más oscuro y *aesthetic*, nada robótico, digital ni predecible. La idea es el cuarto oscuro y el álbum de fotos:
+
+- **Fondo:** negro cálido `#130F0D` con la fibra de un papel de álbum. Texto en papel de copia `#EFE6D8`; el acento en **ámbar** `#E8B48A` (la luz de seguridad del cuarto oscuro); la terracota clara de Dial para el esquinero y las comillas.
+- **Titulares en Instrument Serif**, el acento (`*así*`) en cursiva ámbar **sin franja** (sobre el negro se lee solo). Antetítulos y cartelas en sans espaciada; la mono solo en créditos.
+- **Símbolo:** el esquinero de álbum (triángulo terracota) antes del nombre de la línea y de cada antetítulo.
+- **Cabecera:** esquinero + *Arte y memoria* en serif cursiva, el logo y, debajo, el **lugar y la época de la historia** en versalitas (`meta`: `CIUDAD DE MÉXICO · 1912`), no la fecha de hoy.
+- **Fotos a sangre** (`portada`, `foto`): reveladas más hondo (algo menos de color, sombras cálidas, viñeta de copia) y un velo largo hacia el negro. `"revelado": 0.5` lo suaviza.
+- **Las obras se respetan:** una pintura, un grabado o una foto de archivo no se recortan ni se colorizan.
+- **Estilos:**
+  - `portada` y `foto`: como en Al Aire, con el titular en serif y `rotulo` como antetítulo.
+  - `obra`: la obra entera (`"obra": "fuentes/x.jpg"`) como copia con borde de papel, sombra y esquineros de álbum, y debajo la **cartela de museo**: `"cartela": {"titulo", "autor", "fecha", "tecnica", "lugar"}`, más `rotulo` y `texto`. `"borde": 0` quita el borde (pinturas, objetos); `"esquineros": false` los quita; `"giro"` la inclina.
+  - `copias`: dos o tres fotos como copias sueltas sobre la mesa, un poco giradas (`"copias": [{"foto", "giro"}]`), sin recorte; debajo `rotulo`, `titulo` y `texto`.
+  - `epoca`: un año o dato enorme en cursiva ámbar (`dato`), `rotulo`, `titulo`, `texto` y, si se quiere, `"tiempo": [["1890", "texto"], …]` (línea de tiempo). Con `"foto"`, una copia de archivo arriba.
+  - `citas`: la voz del artista, en serif con comillas terracota y el autor en versalitas ámbar.
+  - `cta`: la pregunta en serif, el signo en cursiva terracota, `TU MIRADA` y la firma.
+- **Créditos:** obra, autor, año y licencia (`José Guadalupe Posada, Calavera maderista, ca. 1910 · National Gallery of Art · CC0`). Derechos de las obras: ver el perfil de la línea.
+- **Descripción:** `📍 La obra` (ficha) en lugar de la versión del Gobierno y `📍 Hoy`; hashtags con `#ArteYMemoria` y `#DialMedio` al final.
+- Ejemplo: `ejemplo/arte-muestra.json` (muestra de diseño, sin historia real).
+
 ## 1. Investigar y verificar (antes de escribir una sola lámina)
 
 1. Fijar la fecha real del hecho. "Ayer" u "hoy" se calculan con la fecha actual. Si las fotos pueden ser de días distintos, decirlo en las notas.

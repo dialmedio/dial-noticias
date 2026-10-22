@@ -5,7 +5,8 @@ etiquetas en caja) y La Linterna (tipos de madera, tinta con textura de prensa,
 registro imperfecto). Todo dentro de la paleta Dial; la brasa pasa a ser el color
 de Al Aire (el manual ya la reserva para los estados "en vivo").
 
-La línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py, que usa
+La línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py y la de Arte y memoria
+("seccion": "arte") arte.py; las dos usan
 las piezas de este archivo (cabecera, textos, fotos, hoja) con su propio estilo.
 """
 import re
@@ -654,6 +655,9 @@ def lamina(cfg, lam, n):
     if cfg.get("seccion") == "nuevos-mundos":
         import nuevos_mundos
         return nuevos_mundos.lamina(cfg, lam, n).convert("RGB")
+    if cfg.get("seccion") == "arte":
+        import arte
+        return arte.lamina(cfg, lam, n).convert("RGB")
     estilo = estilo_de(lam)
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
@@ -667,5 +671,8 @@ def capa_video(cfg, lam, w, h):
     if cfg.get("seccion") == "nuevos-mundos":
         import nuevos_mundos
         return nuevos_mundos.capa_video(cfg, lam)
+    if cfg.get("seccion") == "arte":
+        import arte
+        return arte.capa_video(cfg, lam)
     lam = dict(lam, _video=True)
     return (l_portada if estilo_de(lam) == "portada" else l_foto)(cfg, lam)
