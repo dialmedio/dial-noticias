@@ -436,7 +436,10 @@ def degradado_bajo(img, desde=0.42, fuerza=0.92):
 
 def l_portada(cfg, lam):
     img = foto_base(cfg, lam)
-    degradado_bajo(img, 0.34 if B < 200 else 0.28, 0.96)  # portada: titular grande, fotos cargadas
+    if lam.get("degradado"):  # fotos claras: degradado más alto y más fuerte, [desde, fuerza]
+        degradado_bajo(img, *lam["degradado"])
+    else:
+        degradado_bajo(img, 0.34 if B < 200 else 0.28, 0.96)  # portada: titular grande, fotos cargadas
     cabecera(img, lam.get("meta", cfg["meta"]))
     tam = 108 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
@@ -460,6 +463,8 @@ def l_foto(cfg, lam):
     arriba = lam.get("posicion") == "arriba"
     if arriba:  # el cartel o la persona están abajo: el texto sube bajo la cabecera
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.55, fuerza=0.88))
+    elif lam.get("degradado"):  # fotos claras: degradado más alto y más fuerte, [desde, fuerza]
+        degradado_bajo(img, *lam["degradado"])
     else:
         degradado_bajo(img, 0.5 if B < 200 else 0.42, 0.88)
     cabecera(img, lam.get("meta", cfg["meta"]))
@@ -558,7 +563,7 @@ def l_citas(cfg, lam, n):
 def l_analisis(cfg, lam, n):
     """Carbón + collage en semitono brasa con borde rasgado + análisis."""
     img = campo(FONDO, 30 + n, 0.06)
-    alto_foto = round(H * 0.444)
+    alto_foto = round(H * lam.get("alto_semitono", 0.444))
     if lam.get("semitono"):
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         foco = tuple(lam.get("foco_semitono", (0.5, 0.45)))
@@ -643,6 +648,41 @@ def estilo_de(lam):
     return "foto"
 
 
+def pegar_recorte(img, cfg, rc, n):
+    """Recorte tipo collage (23 oct 2026): una foto pegada con borde de papel, el canto de abajo
+    rasgado, un giro leve y sombra, que se sale de su franja. Campos: foto, x, y, ancho, alto,
+    foco, giro, pie (texto en caja bajo la foto)."""
+    foto = Image.open(cfg["_base"] / rc["foto"]).convert("RGB")
+    w = rc.get("ancho", 300)
+    h = rc.get("alto", round(w * 1.25))
+    fx, fy = rc.get("foco", (0.5, 0.4))
+    s = max(w / foto.width, h / foto.height)
+    fw, fh = round(foto.width * s), round(foto.height * s)
+    foto = foto.resize((fw, fh), Image.LANCZOS)
+    cx = int(min(max(fx * fw - w / 2, 0), fw - w))
+    cy = int(min(max(fy * fh - h / 2, 0), fh - h))
+    foto = foto.crop((cx, cy, cx + w, cy + h))
+    b = rc.get("borde", 14)
+    papel = Image.new("RGBA", (w + 2 * b, h + 2 * b + 18), PAPEL + (255,))
+    papel.paste(foto, (b, b))
+    ras = ruido_fractal(papel.width, 1, 90 + n, (6, 30), (0.6, 0.4))[0]
+    mk = Image.new("L", papel.size, 255)
+    dm = ImageDraw.Draw(mk)
+    for x in range(papel.width):
+        dm.line([(x, papel.height - 2 - ras[x] * 26), (x, papel.height)], fill=0)
+    papel.putalpha(mk)
+    rot = papel.rotate(rc.get("giro", -4), expand=True, resample=Image.BICUBIC)
+    capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sombra = Image.new("RGBA", rot.size, (20, 14, 10, 255))
+    sombra.putalpha(rot.split()[3].filter(ImageFilter.GaussianBlur(14)).point(lambda v: int(v * 0.6)))
+    x, y = rc["x"], rc["y"]
+    capa.alpha_composite(sombra, (x + 12, y + 18))
+    capa.alpha_composite(rot, (x, y))
+    img.alpha_composite(capa)
+    if rc.get("pie"):
+        etiqueta(img, x + 26, y + rot.height - 46, rc["pie"].upper(), fondo=ACENTO, color=CARBON, punto=False, tam=24)
+
+
 ESTILOS = {"portada": l_portada, "foto": l_foto, "pais": l_pais, "citas": l_citas, "analisis": l_analisis, "cta": l_cta}
 
 
@@ -661,6 +701,8 @@ def lamina(cfg, lam, n):
     estilo = estilo_de(lam)
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
+    if lam.get("recorte"):
+        pegar_recorte(im, cfg, lam["recorte"], n)
     return im.convert("RGB")
 
 
