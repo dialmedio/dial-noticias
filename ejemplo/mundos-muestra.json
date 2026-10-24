@@ -1,0 +1,111 @@
+{
+ "salida": "salida",
+ "prefijo": "mundos-muestra",
+ "seccion": "mundos",
+ "ficha": "00",
+ "meta": "Presentación · América Latina",
+ "laminas": [
+  {
+   "tipo": "portada",
+   "foto": "fuentes/autoridades.jpg",
+   "foco": [
+    0.5,
+    0.86
+   ],
+   "credito": "Foto: Fabiammoreno · CC BY-SA 4.0 · Jambaló (Cauca), 2018",
+   "titulo": "Otros mundos *ya existen*",
+   "bajada": "Cada viernes, una salida al modelo que alguien ya probó o investigó."
+  },
+  {
+   "tipo": "texto",
+   "rotulo": "La línea",
+   "titulo": "Economías, gobiernos y formas de vivir que funcionan *de otra manera.*",
+   "texto": "Investigadas o probadas, con sus resultados, sus críticas y sus límites. No utopías de folleto."
+  },
+  {
+   "tipo": "texto",
+   "rotulo": "De dónde partimos",
+   "signatura": "Nobel 2009",
+   "campos": [
+    [
+     "Autora",
+     "Elinor Ostrom"
+    ],
+    [
+     "Obra",
+     "*El gobierno de los bienes comunes* (1990)"
+    ],
+    [
+     "Qué estudió",
+     "Pescadores, regantes y pastores que manejan juntos un recurso sin dueño único."
+    ],
+    [
+     "Qué encontró",
+     "Muchas comunidades crean sus propias reglas y cuidan lo común por siglos, sin Estado ni mercado."
+    ]
+   ],
+   "texto": "Fue la primera mujer en ganar el Nobel de Economía.",
+   "fuentes": "Fuente: Ostrom, E. (1990). Governing the Commons. Cambridge University Press"
+  },
+  {
+   "tipo": "texto",
+   "rotulo": "Dónde se probó",
+   "dato": "1989",
+   "unidad": "Porto Alegre decide su presupuesto *en asambleas de barrio*",
+   "texto": "Ese año la ciudad brasileña abrió a sus vecinos parte de la inversión pública. Hoy el presupuesto participativo existe en miles de ciudades.",
+   "fuentes": "Fuentes: Banco Mundial · People Powered"
+  },
+  {
+   "foto": "fuentes/quintin-1915.jpg",
+   "foco": [
+    0.5,
+    0.35
+   ],
+   "tratamiento": "cianotipo",
+   "credito": "Foto: autor desconocido · dominio público · 1915",
+   "rotulo": "Vestigios",
+   "titulo": "Lo comunal *tiene historia*",
+   "texto": "Manuel Quintín Lame, detenido en 1915, defendía los resguardos: la tierra colectiva de los pueblos indígenas."
+  },
+  {
+   "tipo": "texto",
+   "rotulo": "El criterio",
+   "titulo": "Cada pieza dice *qué funciona y qué no*",
+   "columnas": [
+    [
+     "Lo que muestra",
+     [
+      "Dónde se probó y quién lo investigó",
+      "Los resultados, con cifra y fuente",
+      "Qué hay parecido en la región"
+     ]
+    ],
+    [
+     "Lo que falta",
+     [
+      "Las críticas que recibe",
+      "Sus límites y lo que no resolvió",
+      "Si los datos se discuten, las dos lecturas"
+     ]
+    ]
+   ]
+  },
+  {
+   "tipo": "texto",
+   "fondo": "cian",
+   "rotulo": "La voz",
+   "citas": [
+    {
+     "texto": "Otro mundo no solo es posible: ya viene en camino. En un día tranquilo, *puedo oírlo respirar.*",
+     "autor": "Arundhati Roy · Foro Social Mundial, Porto Alegre, 2003"
+    }
+   ],
+   "fuentes": "Traducción de Dial"
+  },
+  {
+   "tipo": "cta",
+   "pregunta": "¿Qué *otro mundo* conoces que ya esté funcionando?",
+   "texto": "Cuéntanos en los comentarios: lo investigamos."
+  }
+ ]
+}

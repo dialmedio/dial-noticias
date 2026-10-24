@@ -90,6 +90,17 @@ La política de la tecnología (hackeos, vigilancia, regulación, plataformas, m
 - **Láminas:** `portada` (titular, bajada y la foto en tarjeta redondeada, en blanco y negro; `"color": true` la deja a color), `foto` (tarjeta + texto; `"posicion": "arriba"` invierte), `post` (lámina de texto: `rotulo`, `titulo`, `texto` y, para "cómo funciona", `items` numerados), `dato` (`dato`, `unidad`, `texto`), `citas` (cita con comilla colgada; nunca como si fuera un post de X de alguien real) y `cta`. Numeración 01 / 07 abajo.
 - `"meta"`: `PAÍS · DD MES` (o `MUNDO · DD MES`). Muestra de referencia: `noticias/2026-10-25-tec-muestra-urna-brasil.json`.
 
+## Línea Nuevos mundos posibles (v1, 24 oct 2026; pendiente del visto bueno de Martín)
+
+Salidas al modelo: economías alternativas, otras formas de organizar lo público, investigaciones y experiencias reales (perfil en `dial-al-aire/perfil-nuevos-mundos-posibles.md`). Sale los viernes desde la mesa de Al Aire (tema `nuevos-mundos`). Se activa con `"seccion": "mundos"` (**no** `"nuevos-mundos"`, que es Termómetro); la compone `mundos.py` en HTML/CSS con Chrome, como Tecnología y poder. Martín pidió un diálogo entre el archivo, el solarpunk, lo minimalista y lo elegante de un medio internacional.
+
+- **Idea:** el cianotipo, la impresión al sol con la que se hicieron los primeros libros con fotografías (Anna Atkins, 1843): archivo, sol y naturaleza en una sola técnica.
+- **Color:** papel de archivo, azul cianotipo como tinta (acento `*así*` en cursiva azul; en oro sobre fondo cian) y oro de sol. Ninguna otra línea usa azul.
+- **Tipografía:** Newsreader (Production Type, OFL) con tamaño óptico, fina en titulares y cómoda en texto; Instrument Sans espaciada para rótulos; IBM Plex Mono solo para datos (ficha, créditos, fuentes).
+- **Archivo:** cada pieza es una ficha numerada (`"ficha": "01"` en el JSON, sube de a uno por pieza), las fotos llevan pie de lámina ("Lám. 05") y crédito vertical al canto. **Solarpunk:** el símbolo es un sol sobre el horizonte; en la portada sale del canto de la foto; el cierre es una impresión al sol con órbitas.
+- **Láminas:** `portada` (foto a sangre arriba, titular en papel; el tamaño se ajusta al largo), `foto` (placa + pie; `"tratamiento": "cianotipo"` para fotos de archivo o vestigios), `post` (`rotulo`, `titulo`, `texto`, `items`), `dato` (cifra fina sobre un sol: `dato`, `unidad`, `texto`), `ficha` (tarjeta de catálogo de la investigación: `campos` = lista de [etiqueta, valor], `signatura` arriba a la derecha, `tipo_ficha`), `balance` (`columnas` = [["Lo que muestra", [...]], ["Lo que falta", [...]]]: el criterio de la línea hecho lámina), `citas` y `cta`. `"fondo": "cian"` invierte cualquier lámina de texto para dar ritmo (una por pieza basta). `"fuentes"` en una lámina pone sus fuentes en el pie.
+- `"meta"`: `TEMA · LUGAR` (p. ej. `Economía · Brasil`). Muestra: `ejemplo/mundos-muestra.json`.
+
 ## 1. Investigar y verificar (antes de escribir una sola lámina)
 
 1. Fijar la fecha real del hecho. "Ayer" u "hoy" se calculan con la fecha actual. Si las fotos pueden ser de días distintos, decirlo en las notas.
