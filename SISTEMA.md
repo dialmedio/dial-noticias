@@ -26,7 +26,9 @@ Lo aprobó Martín con el carrusel "Protestas en el mundo". Referentes: Mutante 
 - **Franja del acento:** se pintan todas las franjas antes que el texto, para que las letras que bajan (g, j, p, q, y) de la línea de arriba no queden cortadas. La puntuación pegada al acento (¿ ? , :) entra en la franja.
 - **Texturas:** solo de impresión y evidentes. Tipo de madera (v3, 19 oct 2026): borde nítido y mordido, veta horizontal larga, huecos de canto nítido y poros sueltos; la segunda pasada, corrida y en otra tinta, solo asoma por fuera de la letra. Moteado amplio en los campos planos. Nunca grano sobre las fotos ni en el texto corrido.
 
-## Línea Nuevos Mundos Posibles (v2, 22 oct 2026)
+## Línea Termómetro, antes Nuevos Mundos Posibles (v2, 22 oct 2026)
+
+Desde el 23 oct 2026 es la línea de clima y ambiente de Al Aire (denuncias, crisis climática, soluciones y ciencia) y se llama **Termómetro**. La clave interna sigue siendo `"seccion": "nuevos-mundos"`.
 
 Buenas noticias: conservación, ciencia y biología, clima, comunidades y economías propias, ciudades que cambian. Es una línea propia de Al Aire, con corrida de propuestas los lunes y los jueves. Se activa con `"seccion": "nuevos-mundos"` arriba en el JSON (sin `"seccion"` todo sale como Al Aire, idéntico). La dibuja `nuevos_mundos.py`, con la misma estructura de Al Aire (cabecera, logo, crédito abajo, lámina final de pregunta) y un estilo propio.
 
@@ -48,11 +50,12 @@ La v1 (verde brote, cuadrícula de libreta, grabado de línea) la descartó Mart
   - `paises`: varios lugares uno debajo del otro (p. ej. "No es solo Brasil"): `rotulo`, `titulo` y `"lugares": [{"nombre", "dato" (opcional, en brasa a la derecha), "texto"}]`. Cada texto se entiende solo (qué es el lugar, qué pasó, según quién).
   - `dos`: dos personas con el mismo trato (p. ej. los candidatos de una elección): retratos del mismo tamaño lado a lado, nombre y cargo en cada uno, y abajo la banda eucalipto con `rotulo`, `titulo` y `texto`. `"personas": [{"foto", "foco", "nombre", "cargo"}, …]`; La cabecera va en su propia franja verde y las fotos empiezan debajo, para no tapar caras; `"alto_fotos"` (0.5 por defecto) si el texto es largo. Fotos de los dos en acción y parecidas entre sí (p. ej. ambos hablando ante un micrófono), no un retrato oficial contra una foto de campaña. Orden neutral (alfabético por apellido) y la misma medida en las dos descripciones.
   - `cta`: eucalipto hondo, el signo en cursiva brasa, la pregunta en serif y la firma.
-- **Criterio:** que esté probado, no solo anunciado; los límites van en la pieza (una lámina de "lo que falta"); sin maquillaje verde (nunca solo el comunicado de una empresa o un gobierno sobre sus logros). Ciencia: nombre común y científico, y "especie nueva" solo si está descrita formalmente.
+- **Criterio de las denuncias:** pruebas verificables (datos oficiales o independientes, fallos, investigaciones), la versión de la empresa o autoridad señalada y cuidado de las fuentes amenazadas; en la descripción, `📍 Qué responden` en lugar de `📍 Lo que falta`.
+- **Criterio de las buenas noticias:** que esté probado, no solo anunciado; los límites van en la pieza (una lámina de "lo que falta"); sin maquillaje verde (nunca solo el comunicado de una empresa o un gobierno sobre sus logros). Ciencia: nombre común y científico, y "especie nueva" solo si está descrita formalmente.
 - **Noticias con elecciones (Martín, 22 oct):** la elección puede ser el eje de la pieza. Se cuenta con datos por gobierno (oficiales y atribuidos), los planes de los dos candidatos con la misma medida, sus frases textuales y las advertencias atribuidas a quien las hace; si sirve, el contexto de la región. Dial no pone el calificativo: lo sostienen los datos.
 - **Mensajes de Martín:** si pide una dedicatoria o un mensaje, se escribe con palabras propias de Dial a partir de su idea, no copiando literal su nota (22 oct).
 - **Fotos de especies:** también de iNaturalist, solo CC0, CC BY o CC BY-SA (nunca NC ni ND), con las mismas reglas de 3c.
-- **Descripción:** `📍 Cómo funciona` cuando no hay versión del Gobierno, y siempre `📍 Lo que falta`. Hashtags con `#NuevosMundosPosibles` y `#DialMedio` al final.
+- **Descripción:** `📍 Cómo funciona` cuando no hay versión del Gobierno, y siempre `📍 Lo que falta`. Hashtags con `#TermometroDial` y `#DialMedio` al final.
 - Ejemplos: `ejemplo/nuevos-mundos-muestra.json` (muestra de diseño, sin noticia real).
 
 ## Línea Arte y memoria (v1, 22 oct 2026; nombre provisional)

@@ -1,4 +1,4 @@
-"""Estilo visual de Nuevos Mundos Posibles (v2, 22 oct 2026), la línea de buenas noticias de Al Aire.
+"""Estilo visual de Termómetro (antes Nuevos Mundos Posibles; v2, 22 oct 2026), la línea de clima y ambiente de Al Aire.
 
 Martín pidió que no fuera predecible ni cuadriculada: más suave, elegante y sutil, coherente con Dial,
 con el verde y el naranja juntos. Referentes: The Guardian (titulares en serif, mucho aire, fotos
@@ -26,7 +26,7 @@ EUCALIPTO = (86, 112, 94)          # el verde de la línea: suave, apagado, haci
 EUCALIPTO_HONDO = (44, 62, 50)     # el mismo verde, oscuro: fondo del cierre y tinta del riso
 SALVIA = (200, 211, 190)           # verde muy claro, para barras y filetes
 GRIS = (95, 85, 76)
-SELLO = "NUEVOS MUNDOS POSIBLES"
+SELLO = "TERMÓMETRO"
 
 
 def g(nombre):  # medidas vivas de al_aire (cambian con el formato)
@@ -137,7 +137,7 @@ def antetitulo(img, x, y, texto, color, hoja=None, sombra=False):
 
 def cabecera(img, meta, fondo="foto"):
     """Cabecera de sección, como la de un periódico (22 oct 2026: las cajas se veían "muy digitales"):
-    la hoja brasa y "Nuevos mundos posibles" en serif cursiva, el logo a la derecha, un filete fino
+    la hoja brasa y "Termómetro" en serif cursiva, el logo a la derecha, un filete fino
     a todo el ancho y debajo la fecha en versalitas. fondo: "foto", "claro" (papel) u "oscuro" (verdes)."""
     W, H, M, T, R = g("W"), g("H"), g("M"), g("T"), g("R")
     if fondo == "foto":
@@ -145,7 +145,7 @@ def cabecera(img, meta, fondo="foto"):
     tinta = CARBON if fondo == "claro" else PAPEL
     d = ImageDraw.Draw(img)
     aa.hoja(img, M + 12, T + 19, 12, BRASA)
-    d.text((M + 34, T + 33), "Nuevos mundos posibles", font=cursiva(40), fill=tinta, anchor="ls")
+    d.text((M + 34, T + 33), "Termómetro", font=cursiva(40), fill=tinta, anchor="ls")
     lg = dn.logo(36)
     if fondo == "claro":
         a = np.asarray(lg).copy()

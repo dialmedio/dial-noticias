@@ -5,7 +5,7 @@ etiquetas en caja) y La Linterna (tipos de madera, tinta con textura de prensa,
 registro imperfecto). Todo dentro de la paleta Dial; la brasa pasa a ser el color
 de Al Aire (el manual ya la reserva para los estados "en vivo").
 
-La línea Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py y la de Arte y memoria
+La línea Termómetro, antes Nuevos Mundos Posibles ("seccion": "nuevos-mundos") la dibuja nuevos_mundos.py y la de Arte y memoria
 ("seccion": "arte") arte.py; las dos usan
 las piezas de este archivo (cabecera, textos, fotos, hoja) con su propio estilo.
 """
