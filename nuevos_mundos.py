@@ -7,7 +7,8 @@ grandes, datos limpios), La Linterna (impresión) y Mutante (riso de dos tintas)
 - Titulares en Instrument Serif, con el acento en cursiva (brasa sobre foto u oscuro, terracota sobre papel).
 - Eucalipto (verde suave) + brasa: el par de la línea. Papel y hueso de Dial como campos claros.
 - Fotos de las láminas sin foto en riso de dos tintas (eucalipto y brasa), sin grano.
-- Rótulos sin caja: una hoja y el texto en mono, como los antetítulos del Guardian.
+- Rótulos sin caja, en sans espaciada del color de la línea, como los antetítulos del Guardian (v3: sin hoja ni mono;
+  el símbolo es el aro de Dial con el punto brasa a las tres, en la cabecera). Papel reciclado en las láminas claras.
 - La misma estructura de Al Aire: cabecera, logo, crédito abajo, lámina final de pregunta.
 """
 import sys
@@ -19,14 +20,21 @@ from PIL import Image, ImageDraw, ImageFilter
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dial_noticias as dn  # noqa: E402
 import al_aire as aa  # noqa: E402
+import materia as mt  # noqa: E402
 
 CARBON, PAPEL, HUESO = dn.CARBON, dn.PAPEL, (233, 223, 207)
+RECICLADO = (236, 233, 223)        # v3: las láminas claras van en papel reciclado (con sus motas), no en el papel de Dial
+RECICLADO_HUESO = (230, 223, 208)  # el mismo papel, más cálido, para las citas
 TERRACOTA, BRASA = dn.TERRACOTA, (229, 138, 58)
 EUCALIPTO = (86, 112, 94)          # el verde de la línea: suave, apagado, hacia el gris
 EUCALIPTO_HONDO = (44, 62, 50)     # el mismo verde, oscuro: fondo del cierre y tinta del riso
 SALVIA = (200, 211, 190)           # verde muy claro, para barras y filetes
 GRIS = (95, 85, 76)
 SELLO = "TERMÓMETRO"
+# v3 (revisión de conjunto, 24 oct 2026): sobre las fotos la franja va en eucalipto con la cursiva en papel. Con la
+# franja brasa, en la rejilla del perfil una portada de Termómetro no se distinguía de una de Al Aire. La brasa
+# sigue en el antetítulo, el punto del aro, el dato destacado y los campos verdes (el verde y el naranja juntos).
+FRANJA_FOTO = dict(franja=EUCALIPTO, acento=PAPEL)
 
 
 def g(nombre):  # medidas vivas de al_aire (cambian con el formato)
@@ -49,7 +57,7 @@ def rico_serif(contenido, tam, color, inter=1.0):
     return r
 
 
-def dibujar_franja(img, r, x, y, lineas, franja):
+def dibujar_franja(img, r, x, y, lineas, franja, acento=CARBON):
     """Como Rico.dibujar, pero el acento (*así*) va en cursiva carbón sobre una franja (22 oct 2026:
     la cursiva naranja sola no siempre se leía). Primero se pintan todas las franjas y después todo
     el texto, para que las letras que bajan de la línea de arriba no queden tapadas."""
@@ -79,31 +87,13 @@ def dibujar_franja(img, r, x, y, lineas, franja):
     if rects:
         franja_impresa(img, rects, franja, sum(map(ord, "".join(p[2] for p in posiciones))) % 997)
     for cx, base, w, ac, _ in posiciones:
-        d.text((cx, base), w, font=r.fa if ac else r.f, fill=CARBON if ac else r.color, anchor="ls")
+        d.text((cx, base), w, font=r.fa if ac else r.f, fill=acento if ac else r.color, anchor="ls")
     return yy
 
 
 def franja_impresa(img, rects, color, semilla):
-    """Franjas con tinta de impresión: el borde muerde un poco, la tinta carga desigual y no hay
-    esquinas perfectas. Es lo que separa una franja impresa de un rectángulo de pantalla."""
-    x0 = int(max(0, min(r[0] for r in rects) - 12))
-    y0 = int(max(0, min(r[1] for r in rects) - 12))
-    x1 = int(min(img.width, max(r[2] for r in rects) + 12))
-    y1 = int(min(img.height, max(r[3] for r in rects) + 12))
-    w, h = x1 - x0, y1 - y0
-    if w < 4 or h < 4:
-        return
-    m = Image.new("L", (w, h), 0)
-    dm = ImageDraw.Draw(m)
-    for r in rects:
-        dm.rectangle([r[0] - x0, r[1] - y0, r[2] - x0, r[3] - y0], fill=255)
-    a = np.asarray(m.filter(ImageFilter.GaussianBlur(2.2)), np.float32) / 255
-    borde = 0.6 * aa.ruido_suave(w, h, semilla, 5, 5, 1.0) + 0.4 * aa.ruido_suave(w, h, semilla + 1, 30, 4, 1.0)
-    a = np.clip((a - 0.5 + borde * 0.09) * 9 + 0.5, 0, 1)
-    carga = 0.86 + 0.14 * np.clip(aa.ruido_suave(w, h, semilla + 2, 90, 14, 1.4) * 0.5 + 0.5, 0, 1)
-    capa = Image.new("RGBA", (w, h), color + (0,))
-    capa.putalpha(Image.fromarray((a * carga * 255).astype(np.uint8)))
-    img.alpha_composite(capa, (x0, y0))
+    """Franjas con tinta de impresión (v3: la misma de todas las líneas, materia.franja)."""
+    mt.franja(img, rects, color, semilla)
 
 
 def alto_titular(contenido, tam, ancho, inter=1.0):
@@ -111,28 +101,24 @@ def alto_titular(contenido, tam, ancho, inter=1.0):
     return r.alto(r.equilibradas(ancho))
 
 
-def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja=BRASA, inter=1.0):
+def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja=BRASA, inter=1.0, acento=CARBON):
     """Titular en serif con el acento sobre franja: brasa sobre fotos y verdes, salvia sobre papel."""
     r = rico_serif(contenido, tam, color, inter)
-    return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja)
+    return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja, acento)
 
 
 def espaciado(d, x, y, texto, f, fill, tracking=0.14, sombra=False):
     """Texto en versalitas con espacio entre letras (PIL no lo trae). Devuelve el x final.
     sombra: una sombra carbón de 2 px, para letra pequeña clara sobre fotos con zonas claras."""
-    if sombra:
-        espaciado(d, x + 1.5, y + 1.5, texto, f, CARBON + (170,), tracking)
-    for ch in texto:
-        d.text((x, y), ch, font=f, fill=fill, anchor="ls")
-        x += f.getlength(ch) + f.size * tracking
-    return x
+    return aa.versal(d._image, x, y, texto, f, fill, tracking, sombra)  # v3: con kerning entre letras
 
 
 def antetitulo(img, x, y, texto, color, hoja=None, sombra=False):
-    """Antetítulo como en prensa: una hoja y el texto en sans espaciada, sin caja. y = línea base.
-    Sobre fotos y verdes, el texto va en papel y solo la hoja en brasa."""
-    aa.hoja(img, x + 10, y - 8, 10, hoja or color)
-    espaciado(ImageDraw.Draw(img), x + 28, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
+    """Antetítulo como en prensa: sans espaciada en el color de la línea, sin caja ni símbolo (v3: el símbolo
+    de la línea es el aro de la cabecera; repetirlo en cada antetítulo era adorno). y = línea base.
+    `hoja` es la tinta del antetítulo sobre los verdes (brasa); sobre fotos (sombra) va en papel, que se lee mejor."""
+    tinta = color if sombra else (hoja or color)
+    espaciado(ImageDraw.Draw(img), x, y, texto.upper(), dn.sans(21, 650, 100), tinta, sombra=sombra)
 
 
 def cabecera(img, meta, fondo="foto"):
@@ -144,8 +130,9 @@ def cabecera(img, meta, fondo="foto"):
         img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 230) / H, fuerza=0.8))
     tinta = CARBON if fondo == "claro" else PAPEL
     d = ImageDraw.Draw(img)
-    aa.hoja(img, M + 12, T + 19, 12, BRASA)
-    d.text((M + 34, T + 33), "Termómetro", font=cursiva(40), fill=tinta, anchor="ls")
+    # v3: el aro de Dial con el punto brasa en la estación de Termómetro (a las tres), en lugar de la hoja
+    aa.aro(img, M + 14, T + 21, 28, tinta, BRASA, aa.ESTACIONES["nuevos-mundos"])
+    d.text((M + 42, T + 33), "Termómetro", font=cursiva(40), fill=tinta, anchor="ls")
     lg = dn.logo(36)
     if fondo == "claro":
         a = np.asarray(lg).copy()
@@ -157,11 +144,11 @@ def cabecera(img, meta, fondo="foto"):
     filete = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ImageDraw.Draw(filete).line([(M, T + 54), (W - M - R, T + 54)], fill=tinta + (150,), width=2)
     img.alpha_composite(filete)
-    espaciado(d, M, T + 88, meta.upper(), dn.sans(19, 600, 100), tinta + (235,), sombra=fondo == "foto")
+    espaciado(d, M, T + 88, meta.upper(), dn.sans(20, 650, 100), tinta + (240,), sombra=fondo == "foto")
 
 
 def pie(img, contenido, color):
-    aa.pie(img, contenido.upper(), color)
+    aa.pie(img, contenido, color)  # v3: en caja normal, como pie de foto
 
 
 # ------------------------------------------------------------ riso de dos tintas
@@ -210,7 +197,7 @@ def l_portada(cfg, lam, n):
     cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
         antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA, sombra=True)
-    y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98)
+    y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98, **FRANJA_FOTO)
     if baj:
         aa.texto(img, M, y + 26, baj, 38, ancho - 40, PAPEL + (235,))
     pie(img, aa.credito(lam), PAPEL + (190,))
@@ -233,7 +220,7 @@ def l_foto(cfg, lam, n):
     if lam.get("rotulo"):
         antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA, sombra=True)
     if tt:
-        y = titular(img, M, y, tt, 92, ancho) + 16
+        y = titular(img, M, y, tt, 92, ancho, **FRANJA_FOTO) + 16
     aa.texto(img, M, y, tx, 40, ancho, PAPEL + (240,))
     personas = lam.get("persona") or []
     for p in ([personas] if isinstance(personas, dict) else personas):
@@ -248,7 +235,7 @@ def l_ficha(cfg, lam, n):
     campos [[etiqueta, valor]] en lista con filetes,
     items numerados y cierre. También hace de lámina de análisis en esta línea."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    img = aa.campo(PAPEL, 50 + n, 0.025)
+    img = aa.campo(RECICLADO, 50 + n, clase="reciclado")
     ancho = W - 2 * M - R
     capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))  # el contenido va en su capa para poder centrarlo
     y = T + 150
@@ -257,8 +244,8 @@ def l_ficha(cfg, lam, n):
         alto_foto = round(H * lam.get("alto_foto", 0.4))
         img.alpha_composite(banda(cfg, lam, (W, alto_foto)), (0, 0))
         y = alto_foto + 56
-        if lam.get("pie_foto"):
-            ImageDraw.Draw(img).text((M, alto_foto + 34), lam["pie_foto"].upper(), font=dn.mono(18), fill=GRIS, anchor="ls")
+        if lam.get("pie_foto"):  # v3: pie de foto en cursiva, como en un libro, no en mono
+            ImageDraw.Draw(img).text((M, alto_foto + 36), lam["pie_foto"], font=cursiva(26), fill=GRIS, anchor="ls")
             y += 18
     d = ImageDraw.Draw(capa)
     if lam.get("rotulo"):
@@ -299,7 +286,7 @@ def l_ficha(cfg, lam, n):
     if lam.get("cierre"):  # remate con filete brasa
         y += 22
         h = aa.alto_texto(lam["cierre"], 38, ancho - 30)
-        d.rectangle([M, y + 4, M + 5, y + h - 8], fill=BRASA)
+        mt.franja(capa, [(M, y + 4, M + 5, y + h - 8)], BRASA, 9 + n)
         y = aa.texto(capa, M + 26, y, lam["cierre"], 38, ancho - 30, CARBON) + 10
     libre = (H - B - 20) - y
     baja = 0 if con_foto else max(0, round(libre * 0.45))
@@ -317,7 +304,7 @@ def l_serie(cfg, lam, n):
     cada fila lleva un tercer valor con su grupo y "grupos" da los nombres en orden: el primero va en
     hueso oscuro y el segundo en salvia, con una leyenda debajo."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    img = aa.campo(PAPEL, 55 + n, 0.025)
+    img = aa.campo(RECICLADO, 55 + n, clase="reciclado")
     cabecera(img, lam.get("meta", cfg["meta"]), "claro")
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R
@@ -335,7 +322,7 @@ def l_serie(cfg, lam, n):
     tope = max(fila[1] for fila in serie)
     grupos = lam.get("grupos", [])
     tonos = [(204, 194, 180), SALVIA]
-    fe, fv = dn.mono(24, True), dn.sans(32, 600, 88)
+    fe, fv = cursiva(36), dn.sans(32, 600, 88)  # v3: los años en cursiva serif, no en mono
     col, alto_barra, paso = 110, 46, (70 if len(serie) <= 6 else 62)
     largo = ancho - col - 150
     for k, fila in enumerate(serie):
@@ -344,15 +331,15 @@ def l_serie(cfg, lam, n):
         tono = tonos[grupos.index(fila[2]) % 2] if len(fila) > 2 and fila[2] in grupos else SALVIA
         w = max(6, largo * v / tope)
         cy = y + k * paso
-        d.text((M, cy + alto_barra * 0.72), str(etq), font=fe, fill=GRIS, anchor="ls")
-        d.rectangle([M + col, cy, M + col + w, cy + alto_barra], fill=BRASA if ultima else tono)
+        d.text((M, cy + alto_barra * 0.76), str(etq), font=fe, fill=GRIS, anchor="ls")
+        mt.franja(img, [(M + col, cy, M + col + w, cy + alto_barra)], BRASA if ultima else tono, 31 + k)  # barras impresas
         d.text((M + col + w + 16, cy + alto_barra * 0.74), f"{v:,}".replace(",", "."), font=fv,
                fill=CARBON if ultima else GRIS, anchor="ls")
     y += paso * len(serie)
     if grupos:
         x = M + col
         for k, nombre in enumerate(grupos):
-            d.rectangle([x, y + 4, x + 22, y + 26], fill=tonos[k % 2])
+            mt.franja(img, [(x, y + 4, x + 22, y + 26)], tonos[k % 2], 51 + k)
             x = espaciado(d, x + 32, y + 24, nombre.upper(), dn.sans(18, 650, 100), CARBON) + 30
         y += 40
     if lam.get("unidad"):
@@ -365,7 +352,7 @@ def l_serie(cfg, lam, n):
 def l_citas(cfg, lam, n):
     """Hueso: las voces, en serif, con comillas grandes en brasa."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    img = aa.campo(HUESO, 20 + n, 0.025)
+    img = aa.campo(RECICLADO_HUESO, 20 + n, clase="reciclado")
     cabecera(img, (lam.get("rotulo") or lam.get("meta", cfg["meta"])).upper(), "claro")
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R - 90
@@ -516,16 +503,15 @@ def l_cta(cfg, lam, n):
     if texto_:
         aa.texto(img, M, y + 26, texto_, 38, ancho, PAPEL + (225,))
     fa = dn.sans(24, 650, 100)
-    aa.hoja(img, M + 11, y_pie + 22, 11, BRASA)
-    x = M + 32
+    x = M
     for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
         if k:
-            x = espaciado(d, x + 4, y_pie + 32, "·", fa, PAPEL + (160,)) + 6
+            x = espaciado(d, x + 8, y_pie + 32, "·", fa, PAPEL + (160,)) + 10
         x = espaciado(d, x, y_pie + 32, palabra, fa, BRASA if k == 0 else PAPEL)
     lg = dn.logo(64)
     img.alpha_composite(lg, (M, round(y_pie + 84)))
     d = ImageDraw.Draw(img)
-    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.mono(28, True), fill=PAPEL, anchor="rs")
+    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.sans(30, 560, 96), fill=PAPEL, anchor="rs")
     d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=BRASA, anchor="ls")
     return img
 

@@ -18,6 +18,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))  # para importar al_aire.py también con python -I
+import oficio  # noqa: E402  kerning real en todo lo que dibuja Pillow
 FUENTES = RAIZ / "fuentes"
 
 CARBON = (23, 19, 15)
@@ -127,11 +128,17 @@ def colorizar(img, ajuste=None):
 
 # ---------------------------------------------------------------- tipografía
 
-def fuente(nombre, tam, wdth=None, wght=None):
-    f = ImageFont.truetype(str(FUENTES / nombre), int(round(tam)))
+def fuente(nombre, tam, wdth=None, wght=None, **ejes):
+    """La fuente con kerning real (oficio.py). ejes: otros ejes de la variable, p. ej. opsz=36."""
     if wdth is not None:
-        f.set_variation_by_axes([wdth, wght])
-    return f
+        ejes.update(wdth=wdth, wght=wght)
+    try:
+        return oficio.Fuente(FUENTES / nombre, tam, ejes or None)
+    except Exception:  # sin fontTools: la fuente de siempre, sin kerning
+        f = ImageFont.truetype(str(FUENTES / nombre), int(round(tam)))
+        if wdth is not None:
+            f.set_variation_by_axes([wdth, wght])
+        return f
 
 
 def sans(tam, peso=600, ancho=88):
@@ -669,14 +676,16 @@ def _caja(W, H, formato, foco):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    solo = None
+    solo, otra_salida = None, None
     for a in sys.argv[1:]:
         if a.startswith("--solo="):
             solo = {int(x) for x in a[7:].split(",")}
+        if a.startswith("--salida="):  # pruebas y muestras: no pisa la carpeta de la noticia
+            otra_salida = Path(a[9:])
     ruta_json = Path(args[0]).resolve()
     cfg = json.loads(ruta_json.read_text(encoding="utf-8"))
     cfg["_base"] = ruta_json.parent  # fotos y salida pueden ser relativas al JSON
-    salida = cfg["_base"] / cfg.get("salida", "salida")
+    salida = otra_salida or cfg["_base"] / cfg.get("salida", "salida")
     salida.mkdir(parents=True, exist_ok=True)
     hechas = []
     # formato por defecto: 4:5 para todo; un video solo va en 9:16; "original" conserva la proporción

@@ -57,10 +57,10 @@ def titular(img, x, y, contenido, tam, ancho, color=COPIA, inter=1.0):
     return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
 
 
-def antetitulo(img, x, y, texto, color=COPIA, sombra=False):
-    """Antetítulo: un esquinero pequeño en terracota y el texto en sans espaciada. y = línea base."""
-    esquinero_marca(img, x, y - 17, 15, TERRACOTA)
-    espaciado(ImageDraw.Draw(img), x + 26, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
+def antetitulo(img, x, y, texto, color=AMBAR, sombra=False):
+    """Antetítulo: sans espaciada en ámbar, el color de la línea. y = línea base. v3: sin el esquinero delante
+    (el símbolo de la línea va una vez, en la cabecera; los esquineros quedan para sujetar las fotos)."""
+    espaciado(ImageDraw.Draw(img), x, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
 
 
 def esquinero_marca(img, x, y, lado, color):
@@ -75,22 +75,23 @@ def cabecera(img, meta, sobre_foto=True):
     if sobre_foto:
         img.alpha_composite(velo_superior(W, g("H"), (T + 200) / g("H"), 0.78))
     d = ImageDraw.Draw(img)
-    esquinero_marca(img, M, T + 6, 26, TERRACOTA)
-    d.text((M + 40, T + 32), NOMBRE, font=cursiva(42), fill=COPIA, anchor="ls")
+    # v3: el aro de Dial con el punto ámbar en la estación de Arte (a las nueve), como las demás líneas
+    aa.aro(img, M + 14, T + 20, 28, COPIA, AMBAR, aa.ESTACIONES["arte"])
+    d.text((M + 42, T + 32), NOMBRE, font=cursiva(42), fill=COPIA, anchor="ls")
     lg = dn.logo(36)
     img.alpha_composite(lg, (W - M - R - lg.width, T + 2))
-    espaciado(d, M + 40, T + 72, meta.upper(), dn.sans(18, 600, 100), COPIA + (200,), sombra=sobre_foto)
+    espaciado(d, M + 42, T + 72, meta.upper(), dn.sans(18, 600, 100), COPIA + (200,), sombra=sobre_foto)
 
 
 def pie(img, contenido, color=GRIS + (230,)):
-    aa.pie(img, contenido.upper(), color)
+    aa.pie(img, contenido, color)  # v3: en caja normal, como pie de foto
 
 
 # ------------------------------------------------------------ fondo y fotos
 
 def fondo(semilla, color=NOCHE):
-    """Negro cálido con la fibra y el moteado de un papel de álbum (muy leve)."""
-    return aa.campo(color, semilla, 0.09)
+    """Cartulina negra de álbum (v3, materia.py): formación honda y fibras claras sueltas."""
+    return aa.campo(color, semilla, clase="negro")
 
 
 def velo(W, H, desde, fuerza, color=NOCHE):
@@ -412,16 +413,15 @@ def l_cta(cfg, lam, n):
     if texto_:
         aa.texto(img, M, y + 26, texto_, 38, ancho, COPIA + (220,))
     fa = dn.sans(24, 650, 100)
-    esquinero_marca(img, M, y_pie + 12, 18, TERRACOTA)
-    x = M + 32
+    x = M
     for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
         if k:
-            x = espaciado(d, x + 4, y_pie + 32, "·", fa, COPIA + (150,)) + 6
+            x = espaciado(d, x + 8, y_pie + 32, "·", fa, COPIA + (150,)) + 10
         x = espaciado(d, x, y_pie + 32, palabra, fa, AMBAR if k == 0 else COPIA)
     lg = dn.logo(64)
     img.alpha_composite(lg, (M, round(y_pie + 84)))
     d = ImageDraw.Draw(img)
-    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.mono(28, True), fill=COPIA, anchor="rs")
+    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.sans(30, 560, 96), fill=COPIA, anchor="rs")
     d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=AMBAR, anchor="ls")
     return img
 

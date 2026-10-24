@@ -18,6 +18,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dial_noticias as dn  # noqa: E402
+import materia as mt  # noqa: E402
 
 CARBON, PAPEL, HUESO = dn.CARBON, dn.PAPEL, (233, 223, 207)
 TERRACOTA, BRASA = dn.TERRACOTA, (229, 138, 58)
@@ -108,11 +109,11 @@ def tinta(mascara, semilla, fuerza=1.0):
     return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
 
 
-def campo(color, semilla, manchas=0.035):
-    """Tinta plana o papel con moteado de impresión: manchas amplias y una fibra muy leve."""
-    n = 0.85 * ruido_suave(W, H, semilla, 140, 110, 2.0) + 0.15 * ruido_suave(W, H, semilla + 9, 40, 3, 1.0)
-    a = np.array(color, np.float32)[None, None, :] * (1 + n[..., None] * manchas * 0.55)
-    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).convert("RGBA")
+def campo(color, semilla, manchas=None, clase=None):
+    """Campo impreso (v3, materia.py): el papel con su formación y la tinta que carga desigual.
+    El papel claro va como papel de prensa; los colores, como tinta plana sobre papel."""
+    clase = clase or ("prensa" if sum(color) > 600 else "tinta")
+    return mt.imagen(mt.campo(W, H, color, semilla, clase))
 
 
 def estampar(base, mascara, color, semilla, desfase=(0, 0), multiplicar=False, fuerza=1.0, opacidad=1.0, debajo_de=None):
@@ -134,34 +135,18 @@ def estampar(base, mascara, color, semilla, desfase=(0, 0), multiplicar=False, f
 
 
 def semitono(foto, tam, celda, tinta_color, fondo_color, angulo=22, contraste=1.25, foco=(0.5, 0.5), luz=False):
-    """Foto en semitono de una tinta (como la riso de Mutante)."""
+    """Foto en semitono de una tinta (como la riso de Mutante). v3: trama de periódico de verdad (materia.py),
+    con punto euclidiano a 45°, ganancia de punto y la fibra comiendo el borde de cada punto, sobre papel entintado."""
     g = dn.recortar(foto.convert("L"), f"{tam[0]}:{tam[1]}", foco).resize(tam, Image.LANCZOS)
     a = np.asarray(g, np.float32) / 255
     a = np.clip((a - 0.5) * contraste + 0.5, 0, 1)
     if luz:  # la tinta marca las luces: tinta clara sobre fondo oscuro, sin negativo
         a = 1 - a
-    g = Image.fromarray((a * 255).astype(np.uint8))
-    s = 2
-    grande = g.resize((tam[0] * s, tam[1] * s)).rotate(angulo, expand=True, fillcolor=255)
-    gw, gh = grande.size
-    c = celda * s
-    pequ = np.asarray(grande.resize((gw // c + 1, gh // c + 1), Image.BOX), np.float32) / 255
-    puntos = Image.new("L", (gw, gh), 0)
-    d = ImageDraw.Draw(puntos)
-    for j in range(pequ.shape[0]):
-        for i in range(pequ.shape[1]):
-            r = c * 0.72 * np.sqrt(1 - pequ[j, i])
-            if r > 0.6:
-                cx, cy = i * c + c / 2, j * c + c / 2
-                d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=255)
-    puntos = puntos.rotate(-angulo, fillcolor=0)
-    l0, t0 = (gw - tam[0] * s) // 2, (gh - tam[1] * s) // 2
-    puntos = puntos.crop((l0, t0, l0 + tam[0] * s, t0 + tam[1] * s)).resize(tam, Image.LANCZOS)
-    out = Image.new("RGBA", tam, fondo_color + (255,))
-    capa = Image.new("RGBA", tam, tinta_color + (0,))
-    capa.putalpha(puntos)
-    out.alpha_composite(capa)
-    return out
+    cob = mt.semitono(a, celda, 45 if angulo == 22 else angulo, 0.1, semilla=int(celda * 31 + tam[1]))
+    base = mt.campo(tam[0], tam[1], fondo_color, 11, "tinta")
+    claro = sum(tinta_color) > sum(fondo_color)  # tinta clara sobre fondo oscuro: cubre; oscura sobre claro: multiplica
+    out = mt.entintar(base, cob, tinta_color, 12, multiplicar=not claro, borde=0)
+    return mt.imagen(out)
 
 
 def hoja(img, cx, cy, r, color):
@@ -186,6 +171,80 @@ def hoja(img, cx, cy, r, color):
     capa = Image.new("RGBA", m.size, color + (0,))
     capa.putalpha(m)
     img.alpha_composite(capa, (round(cx - m.width / 2), round(cy - m.height / 2)))
+
+
+# El aro de Dial (marca v4, dial-web/src/lib/aro.mjs) en una caja de 200: radio, trazo, punto y respiro.
+# Cada línea lo lleva con el punto en su estación (v3, 24 oct 2026: una familia, seis voces). Los puntos van
+# siempre en la mitad de arriba: abajo a la derecha el aro se lee como una Q.
+ARO = dict(R=84, trazo=22.4, punto=24.9, aire=9.4)
+ARO_COMPACTO = dict(R=84, trazo=32.5, punto=26.9, aire=6.6)  # 24 px o menos: trazo más grueso
+ESTACIONES = {"al-aire": 0, "nuevos-mundos": 90, "tecnologia": 45, "mundos": -45, "arte": -90, "dial": 45}
+
+
+def aro(img, cx, cy, tam, color, punto=None, angulo=0):
+    """Dibuja el aro de Dial centrado en (cx, cy), de `tam` px de lado, con el punto en `angulo` (0° = arriba)."""
+    g = ARO_COMPACTO if tam <= 24 else ARO
+    s = 8
+    lado = round(tam * s)
+    k = lado / 200
+    m = Image.new("L", (lado, lado), 0)
+    d = ImageDraw.Draw(m)
+    rc = (g["R"] - g["trazo"] / 2) * k
+    c = lado / 2
+    d.ellipse([c - rc, c - rc, c + rc, c + rc], outline=255, width=round(g["trazo"] * k))
+    a = np.radians(angulo - 90)
+    px, py = c + rc * np.cos(a), c + rc * np.sin(a)
+    hueco = (g["punto"] + g["aire"]) * k
+    d.ellipse([px - hueco, py - hueco, px + hueco, py + hueco], fill=0)
+    m = m.resize((round(tam), round(tam)), Image.LANCZOS)
+    capa = Image.new("RGBA", m.size, color + (0,))
+    capa.putalpha(m)
+    x0, y0 = round(cx - tam / 2), round(cy - tam / 2)
+    img.alpha_composite(capa, (x0, y0))
+    p = Image.new("L", (lado, lado), 0)
+    rp = g["punto"] * k
+    ImageDraw.Draw(p).ellipse([px - rp, py - rp, px + rp, py + rp], fill=255)
+    p = p.resize((round(tam), round(tam)), Image.LANCZOS)
+    capa = Image.new("RGBA", p.size, (punto or color) + (0,))
+    capa.putalpha(p)
+    img.alpha_composite(capa, (x0, y0))
+
+
+def ancho_versal(texto_, f, tracking=0.06):
+    """Ancho de un texto en versales con interletra (y kerning)."""
+    if not texto_:
+        return 0
+    k = getattr(f, "kern", lambda a, b: 0)
+    return sum(f.getlength(ch) for ch in texto_) + sum(k(texto_[i], texto_[i + 1]) for i in range(len(texto_) - 1)) \
+        + f.size * tracking * (len(texto_) - 1)
+
+
+def versal(img, x, y, texto_, f, fill, tracking=0.06, sombra=False, ancla="l"):
+    """Versales con interletra, como se componen los antetítulos y las etiquetas en prensa (Pillow no trae
+    tracking). y = línea base. sombra: una sombra carbón leve para letra pequeña clara sobre fotos.
+    Devuelve el x final."""
+    d = ImageDraw.Draw(img)
+    total = ancho_versal(texto_, f, tracking)
+    x = x - {"l": 0, "m": total / 2, "r": total}[ancla]
+    if sombra:  # un halo blando, no una sombra corrida (la corrida se ve de procesador de texto)
+        pad = round(f.size * 0.9)
+        x0, y0 = int(x) - pad, int(y - f.size) - pad
+        capa = Image.new("RGBA", (round(total) + 2 * pad, round(f.size * 1.3) + 2 * pad), (0, 0, 0, 0))
+        versal(capa, x - x0, y - y0, texto_, f, CARBON + (255,), tracking)
+        a = capa.getchannel("A").filter(ImageFilter.GaussianBlur(f.size * 0.22)).point(lambda v: int(v * 0.62))
+        capa = Image.new("RGBA", capa.size, CARBON + (0,))
+        capa.putalpha(a)
+        img.alpha_composite(capa, (max(0, x0), max(0, y0)), (max(0, -x0), max(0, -y0)))
+    k = getattr(f, "kern", lambda a, b: 0)
+    for i, ch in enumerate(texto_):
+        d.text((x, y), ch, font=f, fill=fill, anchor="ls")
+        x += f.getlength(ch) + f.size * tracking + (k(ch, texto_[i + 1]) if i + 1 < len(texto_) else 0)
+    return x
+
+
+def etiqueta_f(tam):
+    """La letra de las etiquetas de Al Aire (v3): la misma condensada de los titulares, en semibold."""
+    return dn.sans(tam, 640, 82)
 
 
 # ------------------------------------------------------------ tipografía
@@ -243,9 +302,10 @@ def dibujar_titular(img, x, y, texto, tam, ancho, color=PAPEL, acento="banda", i
     asc = f.getmetrics()[0]
 
     extra = tam * 0.09 if acento == "banda" else 0  # aire entre la franja y la palabra vecina
+    rects = []
 
-    def franja(x0, x1, base):
-        d.rectangle([x0 - tam * 0.08, base - tam * 0.80, x1 + tam * 0.08, base + tam * 0.16], fill=ACENTO)
+    def franja(x0, x1, base):  # v3: se juntan y se imprimen todas juntas (materia.franja), no son rectángulos de pantalla
+        rects.append([x0 - tam * 0.08, base - tam * 0.80, x1 + tam * 0.08, base + tam * 0.16])
 
     def en_franja(t, idx):
         """Una parte va en la franja si es acento, o si es puntuación pegada a un acento (¿ ? , .)."""
@@ -281,6 +341,7 @@ def dibujar_titular(img, x, y, texto, tam, ancho, color=PAPEL, acento="banda", i
                     cx += w
             if tramo:
                 franja(*tramo, base)
+        mt.franja(img, rects, ACENTO, sum(map(ord, texto)) % 997)
     for k, l in enumerate(lineas):
         cx, base = x, y + asc + k * alto
         for i, t in enumerate(l):
@@ -298,29 +359,30 @@ def dibujar_titular(img, x, y, texto, tam, ancho, color=PAPEL, acento="banda", i
 
 
 def etiqueta(img, x, y, texto, fondo=None, color=CARBON, tam=28, punto=True):
-    """Caja de rótulo en mono (como pide el manual) con el punto "en vivo" (o la hoja de su línea)."""
+    """Etiqueta en caja (v3, 24 oct 2026). La caja va impresa (materia.franja: canto que se abre, tinta que carga
+    desigual) y la letra es la condensada de los titulares en versales con interletra: la mono dentro de una caja
+    perfecta se veía de interfaz, "muy Claude". Con punto lleva el aro de Dial en la estación de Al Aire (arriba,
+    como el foco de "en el aire" de una cabina de radio)."""
     fondo = fondo or ACENTO
-    f = dn.mono(tam, medio=True)
-    d = ImageDraw.Draw(img)
+    f = etiqueta_f(tam * 1.1)
     pad = tam * 0.55
-    hoja_ = punto and SIMBOLO == "hoja"
-    tx = x + pad + (tam * (1.05 if hoja_ else 0.75) if punto else 0)
-    w = f.getlength(texto) + (tx - x) + pad
-    d.rectangle([x, y, x + w, y + tam * 1.7], fill=fondo)
-    if hoja_:
-        hoja(img, x + pad + tam * 0.36, y + tam * 0.85, tam * 0.36, color)
-    elif punto:
-        r = tam * 0.22
-        cy = y + tam * 0.85
-        d.ellipse([x + pad, cy - r, x + pad + 2 * r, cy + r], fill=color)
-    d.text((tx, y + tam * 1.2), texto, font=f, fill=color, anchor="ls")
+    alto = tam * 1.7
+    d_aro = tam * 0.92
+    tx = x + pad + (d_aro + tam * 0.38 if punto else 0)
+    w = ancho_versal(texto, f, 0.05) + (tx - x) + pad
+    mt.franja(img, [(x, y, x + w, y + alto)], fondo, (sum(map(ord, texto)) + int(x)) % 997)
+    cap = -f.getbbox("H", anchor="ls")[1]
+    if punto:
+        aro(img, x + pad + d_aro / 2, y + alto / 2, d_aro, color, angulo=ESTACIONES["al-aire"])
+    versal(img, tx, y + alto / 2 + cap / 2, texto, f, color, 0.05)
     return x + w
 
 
 def cabecera(img, fecha, oscuro=True, sobre_foto=True, logo_papel=False):
-    """Franja superior fija de Al Aire: etiqueta + fecha a la izquierda, logo a la derecha."""
+    """Franja superior fija de Al Aire: etiqueta + fecha a la izquierda, logo a la derecha.
+    v3: la fecha ya no va en caja; va en versales con una sombra leve y un velo un poco más alto arriba."""
     if oscuro and sobre_foto:
-        img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 140) / H, fuerza=0.45))
+        img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 200) / H, fuerza=0.6))
         # sombra de esquina bajo el logo, para cielos y fachadas claras
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         r = np.sqrt(((xx - (W - M - 85)) / 260) ** 2 + ((yy - (T + 22)) / 110) ** 2)
@@ -329,17 +391,13 @@ def cabecera(img, fecha, oscuro=True, sobre_foto=True, logo_papel=False):
         g[..., 3] = (np.clip(1 - r, 0, 1) ** 1.2 * 0.6 * 255).astype(np.uint8)
         img.alpha_composite(Image.fromarray(g, "RGBA"))
     fin = etiqueta(img, M, T, SELLO)
-    d = ImageDraw.Draw(img)
-    fm, lg = dn.mono(24), dn.logo(38)
-    x, y = fin, T
-    if fin + fm.getlength(fecha) + 36 > W - M - lg.width - 16:  # sello largo: la fecha baja a su propia caja
-        x, y = M, T + 28 * 1.7
-    caja = oscuro and sobre_foto
-    if caja:  # sobre cielos claros la fecha se perdía: va en caja carbón
-        d.rectangle([x, y, x + fm.getlength(fecha) + 36, y + 28 * 1.7], fill=CARBON)
-    elif x == M:
-        x -= 16  # sin caja, la fecha alinea con el margen
-    d.text((x + 18, y + 28 * 1.2), fecha, font=fm, fill=(PAPEL if oscuro else CARBON) + (220,), anchor="ls")
+    fm, lg = dn.sans(21, 620, 100), dn.logo(38)
+    alto = 28 * 1.7
+    cap = -fm.getbbox("H", anchor="ls")[1]
+    x, y = fin + 20, T + alto / 2 + cap / 2
+    if x + ancho_versal(fecha, fm, 0.12) > W - M - R - lg.width - 24:  # sello largo: la fecha baja
+        x, y = M, T + alto + 36
+    versal(img, x, y, fecha, fm, (PAPEL if oscuro else CARBON) + (235,), 0.12, sombra=oscuro and sobre_foto)
     if logo_papel:  # manual: sobre terracota, todo en papel, incluido el punto
         a = np.asarray(lg).copy()
         a[a[..., 3] > 0, :3] = PAPEL
@@ -361,13 +419,13 @@ def rotulo_persona(img, persona):
     el pecho, nunca sobre la cara. lado = "izq" o "der": hacia dónde sale el rótulo (por defecto,
     hacia el lado con más espacio). El rótulo se centra en la altura del punto."""
     d = ImageDraw.Draw(img)
-    fn, fc = madera(38), dn.mono(19, True)
+    fn, fc = madera(38), etiqueta_f(20)  # v3: el cargo en versales condensadas, no en mono
     nombre, cargo = persona["nombre"], persona.get("cargo", "").upper()
     px, py = persona.get("x", 0.5) * W, persona.get("y", 0.5) * H
     lado = persona.get("lado") or ("der" if px < W / 2 else "izq")
     guia = 54
     wn, hn = fn.getlength(nombre) + 30, 52
-    wc, hc = (fc.getlength(cargo) + 24, 32) if cargo else (0, 0)
+    wc, hc = (ancho_versal(cargo, fc, 0.06) + 24, 32) if cargo else (0, 0)
     ancho = max(wn, wc)
     top = py - (hn + hc) / 2
     if lado == "der":
@@ -380,11 +438,11 @@ def rotulo_persona(img, persona):
     xn = x0 if lado == "der" else borde - wn
     xc = x0 if lado == "der" else borde - wc
     d.line([(px, py), (borde, py)], fill=PAPEL, width=3)
-    d.rectangle([xn, top, xn + wn, top + hn], fill=PAPEL)
+    mt.franja(img, [(xn, top, xn + wn, top + hn)], PAPEL, int(px) % 997)
     d.text((xn + 15, top + hn - 13), nombre, font=fn, fill=CARBON, anchor="ls")
     if cargo:
-        d.rectangle([xc, top + hn, xc + wc, top + hn + hc], fill=CARBON)
-        d.text((xc + 12, top + hn + hc - 10), cargo, font=fc, fill=PAPEL, anchor="ls")
+        mt.franja(img, [(xc, top + hn, xc + wc, top + hn + hc)], CARBON, int(py) % 997)
+        versal(img, xc + 12, top + hn + hc - 10, cargo, fc, PAPEL, 0.06)
     r = 9
     d.ellipse([px - r - 3, py - r - 3, px + r + 3, py + r + 3], fill=PAPEL)
     d.ellipse([px - r, py - r, px + r, py + r], fill=ACENTO)
@@ -412,7 +470,13 @@ def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
 
 
 def pie(img, contenido, color):
-    ImageDraw.Draw(img).text((M, H - B + 58), contenido, font=dn.mono(20), fill=color, anchor="ls")
+    """Crédito y fuentes (v3): letra de texto pequeña, en caja normal, como el pie de foto de un diario.
+    Antes iba en mono y en mayúsculas, que era lo más "de máquina" de cada lámina."""
+    f = dn.sans(20, 480, 96)
+    ancho = W - 2 * M - R
+    while f.getlength(contenido) > ancho and f.size > 15:  # créditos largos: la letra baja un punto, no se corta
+        f = dn.sans(f.size - 1, 480, 96)
+    ImageDraw.Draw(img).text((M, H - B + 58), contenido, font=f, fill=color, anchor="ls")
 
 
 # ------------------------------------------------------------ láminas (desde el JSON de la noticia)
@@ -427,7 +491,7 @@ def credito(lam):
     c = lam.get("credito", "")
     if lam.get("_video") and c.startswith("Foto:"):
         c = "Video:" + c[5:]
-    return c.upper()
+    return c
 
 
 def degradado_bajo(img, desde=0.42, fuerza=0.92):
@@ -511,7 +575,7 @@ def l_pais(cfg, lam, n):
     d = ImageDraw.Draw(img)
     for i, it in enumerate(lam.get("items", []), 1):
         fi = dn.sans(48, 600, 88)
-        d.text((M, y + 50), f"{i:02d}", font=dn.mono(30, True), fill=CARBON, anchor="ls")
+        d.text((M, y + 50), str(i), font=madera(54), fill=CARBON, anchor="ls")  # v3: cifra de titular, sin el "01" de máquina
         for k, linea in enumerate(partir(it, fi, W - 2 * M - R - 70)):
             d.text((M + 70, y + 50 + k * 54), linea, font=fi, fill=PAPEL, anchor="ls")
         y += 72 + 54 * (len(partir(it, fi, W - 2 * M - R - 70)) - 1)
@@ -521,7 +585,7 @@ def l_pais(cfg, lam, n):
         r = dn.Rico(c["texto"], 52, 400, color=CARBON, interlineado=1.12)
         r.f = dn.serif(56)
         y = r.dibujar(d, M + 70, y + 10, r.lineas((W - 2 * M - R) - 70))
-        d.text((M + 70, y + 40), c["autor"].upper(), font=dn.mono(22, True), fill=CARBON, anchor="ls")
+        versal(img, M + 70, y + 40, c["autor"].upper(), etiqueta_f(23), CARBON, 0.06)
         y += 50
     sube = max(0, y - (H - B - 30))
     sube = min(sube, 330)  # el título no puede subir más allá de la cabecera
@@ -529,7 +593,7 @@ def l_pais(cfg, lam, n):
     final.alpha_composite(img.crop((0, sube, W, sube + H)))
     if y - sube > H - B - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o los items")
-    pie(final, lam.get("credito", "").upper(), PAPEL + (215,))
+    pie(final, lam.get("credito", ""), PAPEL + (215,))
     return final
 
 
@@ -543,20 +607,22 @@ def l_citas(cfg, lam, n):
         r = dn.Rico(c["texto"], 56, 600, color=CARBON, interlineado=1.1)
         r.f = dn.sans(56, 600, 88)
         bloques.append((r, r.lineas((W - 2 * M - R) - 100), c["autor"]))
-    total = sum(r.alto(l) + 80 + 30 * (len(partir(a_.upper(), dn.mono(22, True), W - 2 * M - R - 100)) - 1) for r, l, a_ in bloques) + 70 * (len(bloques) - 1)
+    fa_ = etiqueta_f(23)  # v3: el autor en versales condensadas con interletra, no en mono
+    ancho_a = W - 2 * M - R - 100 - 40
+    total = sum(r.alto(l) + 80 + 30 * (len(partir(a_.upper(), fa_, ancho_a)) - 1) for r, l, a_ in bloques) + 70 * (len(bloques) - 1)
     y = T + 118 + (H - T - 118 - B - 20 - total) / 2
     for k, (r, l, autor) in enumerate(bloques):
         d.text((M - 8, y + 128), "“", font=dn.serif(200), fill=COMILLAS, anchor="ls")
         y = r.dibujar(d, M + 100, y + 10, l)
-        fa_ = dn.mono(22, True)
-        for k, linea in enumerate(partir(autor.upper(), fa_, W - 2 * M - R - 100)):
-            d.text((M + 100, y + 40 + k * 30), linea, font=fa_, fill=(95, 85, 76), anchor="ls")
-        y += 30 * (len(partir(autor.upper(), fa_, W - 2 * M - R - 100)) - 1)
+        lineas_a = partir(autor.upper(), fa_, ancho_a)
+        for j, linea in enumerate(lineas_a):
+            versal(img, M + 100, y + 40 + j * 30, linea, fa_, (95, 85, 76), 0.06)
+        y += 30 * (len(lineas_a) - 1)
         y += 80
         if k < len(bloques) - 1:
             d.line([(M + 100, y), (W - M, y)], fill=(204, 194, 180), width=2)
             y += 70
-    pie(img, lam.get("credito", "").upper(), (95, 85, 76))
+    pie(img, lam.get("credito", ""), (95, 85, 76))
     return img
 
 
@@ -567,13 +633,15 @@ def l_analisis(cfg, lam, n):
     if lam.get("semitono"):
         foto = Image.open(cfg["_base"] / lam["semitono"]).convert("RGB")
         foco = tuple(lam.get("foco_semitono", (0.5, 0.45)))
-        st = semitono(foto, (W, alto_foto), 7, ACENTO, FONDO, foco=foco, contraste=1.5, luz=True)
-        ras = ruido_fractal(W, 1, 77 + n, (8, 40), (0.6, 0.4))[0]
-        mk = Image.new("L", (W, alto_foto), 255)
-        dm = ImageDraw.Draw(mk)
-        for x in range(W):
-            dm.line([(x, alto_foto - 30 - ras[x] * 46), (x, alto_foto)], fill=0)
-        img.paste(st, (0, 0), mk)
+        st = np.asarray(semitono(foto, (W, alto_foto), 7, ACENTO, FONDO, foco=foco, contraste=1.5, luz=True), np.float32)[..., :3]
+        # v3: el borde es un papel rasgado a mano, con la franja de fibra clara que deja el desgarro y su sombra
+        arriba, fibra = mt.rasgado(W, alto_foto, alto_foto - 44, 77 + n, amplitud=16)
+        base = np.asarray(img, np.float32)[:alto_foto, :, :3]
+        sombra = mt._blur(np.roll(arriba + fibra, 5, axis=0), 5) * 0.45
+        base = base * (1 - sombra[..., None])
+        out = base * (1 - arriba[..., None]) + st * arriba[..., None]
+        out = out * (1 - fibra[..., None]) + np.array(HUESO, np.float32)[None, None, :] * fibra[..., None]
+        img.paste(mt.imagen(out), (0, 0))
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.12, fuerza=0.6))
     cabecera(img, lam.get("rotulo", "").upper() or lam.get("meta", cfg["meta"]))
     y0 = alto_foto + 30 if lam.get("semitono") else T + 260  # sin foto, el análisis sube
@@ -582,16 +650,16 @@ def l_analisis(cfg, lam, n):
     for i, it in enumerate(lam.get("items", []), 1):
         fi = dn.sans(46, 600, 88)
         partes = partir(it, fi, W - 2 * M - R - 70)
-        d.text((M, y + 46), f"{i:02d}", font=dn.mono(30, True), fill=ACENTO, anchor="ls")
+        d.text((M, y + 46), str(i), font=madera(52), fill=ACENTO, anchor="ls")
         for k, linea in enumerate(partes):
             d.text((M + 70, y + 46 + k * 52), linea, font=fi, fill=PAPEL, anchor="ls")
         y += 66 + 52 * (len(partes) - 1)
     if lam.get("cierre"):
         y += 22
         h = alto_texto(lam["cierre"], 42, (W - 2 * M - R) - 30)
-        d.rectangle([M, y + 4, M + 6, y + h - 8], fill=ACENTO)
+        mt.franja(img, [(M, y + 4, M + 6, y + h - 8)], ACENTO, 5 + n)
         texto(img, M + 26, y, lam["cierre"], 42, (W - 2 * M - R) - 30, PAPEL + (235,))
-    pie(img, lam.get("credito", "").upper(), PAPEL + (170,))
+    pie(img, lam.get("credito", ""), PAPEL + (170,))
     return img
 
 
@@ -619,17 +687,19 @@ def l_cta(cfg, lam, n):
     y = dibujar_titular(img, M, y, pregunta, tam, ancho)
     if texto_:
         texto(img, M, y + 28, texto_, 40, ancho, PAPEL + (225,))
-    # acciones: tres cajas, la primera es la que más importa
+    # acciones (v3): una línea en versales, sin cajas; la primera, que es la que más importa, en la tinta de la línea
+    fa_ = etiqueta_f(27)
     x = M
     for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
-        fin = etiqueta(img, x, y_pie, palabra, fondo=ACENTO if k == 0 else PAPEL, color=CARBON, tam=26, punto=k == 0)
-        x = fin + 10
+        if k:
+            x = versal(img, x + 14, y_pie + 34, "·", fa_, PAPEL + (150,), 0) + 14
+        x = versal(img, x, y_pie + 34, palabra, fa_, ACENTO if k == 0 else PAPEL, 0.08)
     # firma: el logotipo grande, el lema de Dial Medio y la cuenta
     lg = dn.logo(64)
     img.alpha_composite(lg, (M, round(y_pie + 84)))
     d = ImageDraw.Draw(img)
     cuenta = lam.get("cuenta", "@dialmedio")
-    d.text((W - M - R, y_pie + 84 + 46), cuenta, font=dn.mono(28, True), fill=PAPEL, anchor="rs")
+    d.text((W - M - R, y_pie + 84 + 46), cuenta, font=dn.sans(30, 560, 96), fill=PAPEL, anchor="rs")
     d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=(224, 105, 74), anchor="ls")
     return img
 
@@ -665,12 +735,11 @@ def pegar_recorte(img, cfg, rc, n):
     b = rc.get("borde", 14)
     papel = Image.new("RGBA", (w + 2 * b, h + 2 * b + 18), PAPEL + (255,))
     papel.paste(foto, (b, b))
-    ras = ruido_fractal(papel.width, 1, 90 + n, (6, 30), (0.6, 0.4))[0]
-    mk = Image.new("L", papel.size, 255)
-    dm = ImageDraw.Draw(mk)
-    for x in range(papel.width):
-        dm.line([(x, papel.height - 2 - ras[x] * 26), (x, papel.height)], fill=0)
-    papel.putalpha(mk)
+    # v3: el canto de abajo es un rasgado de verdad (materia.rasgado), con la fibra más blanca que el papel
+    arriba, fibra = mt.rasgado(papel.width, papel.height, papel.height - 16, 90 + n, amplitud=5)
+    rgb = np.asarray(papel, np.float32)[..., :3]
+    rgb = rgb * (1 - fibra[..., None]) + np.array((250, 247, 240), np.float32)[None, None, :] * fibra[..., None]
+    papel = Image.fromarray(np.dstack([np.clip(rgb, 0, 255), np.clip(arriba + fibra, 0, 1) * 255]).astype(np.uint8), "RGBA")
     rot = papel.rotate(rc.get("giro", -4), expand=True, resample=Image.BICUBIC)
     capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     sombra = Image.new("RGBA", rot.size, (20, 14, 10, 255))
