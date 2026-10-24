@@ -702,6 +702,9 @@ def lamina(cfg, lam, n):
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
     recortes = lam.get("recorte") or []
+    if estilo == "portada" and recortes:  # Martín, 24 oct 2026: la portada es una sola foto, sin collage
+        print("aviso: la portada no lleva recortes; se omiten (van en las láminas de adentro)")
+        recortes = []
     for k, rc in enumerate([recortes] if isinstance(recortes, dict) else recortes):  # uno o varios (p. ej. los dos candidatos)
         pegar_recorte(im, cfg, rc, n + 3 * k)
     return im.convert("RGB")
