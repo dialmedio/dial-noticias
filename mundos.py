@@ -12,9 +12,12 @@ naturaleza, y no se parece a ninguna otra línea de Dial:
 - El archivo está en la estructura: cada pieza es una ficha numerada (N.º), las fotos llevan pie como láminas de un
   libro, el crédito va en vertical al canto de la foto y la lámina `ficha` es la tarjeta de catálogo de la
   investigación (autor, obra, año, qué encontró), con su perforación abajo.
-- El solarpunk está en la luz, no en el adorno: el oro de sol y el papel. El símbolo es la perilla de Dial (propuesta
-  de marca v4) en la estación de la línea: cuerpo azul, muesca de oro, a las 135°. Martín descartó el sol del primer
-  borrador ("se ve como de juego indie"). El cierre es la misma perilla en grande.
+- El solarpunk está en la luz y en la materia: el oro de sol, el papel y la emulsión azul pintada a pincel. El símbolo es
+  el aro de Dial (marca v4) en la estación de la línea: aro azul (papel sobre azul) con el punto de oro a las 10:30.
+  Martín descartó el sol del primer borrador ("se ve como de juego indie").
+- Texturas (24 oct, 2.ª ronda: "un poco más de arte"): las láminas azules son una impresión al sol a pincel sobre el
+  papel (cianotipo.py: azul moteado, vetas de pincel, bordes de pincel seco); las fotos en cianotipo llevan los bordes a
+  pincel; líneas de onda finas (como las curvas de Quynza) alrededor del aro del cierre y del sol de la cifra.
 - Lo minimalista: retícula de 8 px, márgenes de 88 px, filetes de un pixel, nada de cajas ni franjas.
 - `"tratamiento": "cianotipo"` en una foto la vuelve impresión al sol (para fotos de archivo, vestigios, planos);
   por defecto las fotos van a color, como las da la realidad.
@@ -85,9 +88,12 @@ def logo_uri(alto, oscuro):
 
 
 def cianotipo(im):
-    """Impresión al sol: la luminancia, con el contraste ajustado, entre el azul de Prusia y el papel."""
+    """Impresión al sol: la luminancia, con el contraste ajustado, entre el azul de Prusia y el papel,
+    con el moteado de la emulsión (cianotipo.py)."""
+    import cianotipo as cia
     g = ImageOps.autocontrast(im.convert("L"), cutoff=1)
-    t = (np.asarray(g).astype(np.float32) / 255.0) ** 0.92
+    mote = cia.ruido(g.width, g.height, max(g.width, g.height) / 5, semilla=7)
+    t = np.clip((np.asarray(g).astype(np.float32) / 255.0) ** 0.92 + 0.07 * (mote - 0.5), 0, 1)
     s, luz = np.array(SOMBRA_CIANO, np.float32), np.array(LUZ_CIANO, np.float32)
     rgb = s + (luz - s) * t[..., None]
     return Image.fromarray(np.clip(rgb + 0.5, 0, 255).astype(np.uint8), "RGB")
@@ -112,21 +118,57 @@ def rico(texto):
     return re.sub(r"\*([^*]+)\*", r"<em>\1</em>", t)
 
 
-ESTACION = 135  # la posición de la línea en el dial de Dial (Dial madre a 45°)
+ESTACION = -45  # la posición del punto de la línea en el dial de Dial (Dial madre a 45°). Solo en la mitad de arriba:
+# abajo a la derecha el aro se lee como una Q
+# El aro de la marca v4 (dial-web/src/lib/aro.mjs), en una caja de 200 × 200: radio, trazo, punto y respiro
+ARO = dict(R=84, trazo=22.4, punto=24.9, aire=9.4)
+_n_aro = [0]
 
 
-def muesca(R, angulo=ESTACION):
-    """Los extremos de la muesca de la perilla (del 36 % al 72 % del radio) y su grueso (0,3 del radio)."""
+def aro(tam=30, color=CIAN_HONDO, punto=SOL, angulo=ESTACION, extra=""):
+    """El símbolo de la línea: el aro de Dial con el punto en la estación de Nuevos mundos."""
+    _n_aro[0] += 1
+    i = f"aro{_n_aro[0]}"
+    rc = ARO["R"] - ARO["trazo"] / 2
     a = math.radians(angulo - 90)
-    return [(round(f * R * math.cos(a), 2), round(f * R * math.sin(a), 2)) for f in (0.36, 0.72)], round(0.3 * R, 2)
+    px, py = 100 + rc * math.cos(a), 100 + rc * math.sin(a)
+    return (f'<svg class="aro" width="{tam}" height="{tam}" viewBox="0 0 200 200" aria-hidden="true"{extra}>'
+            f'<mask id="{i}" maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200"><rect width="200" height="200" fill="#fff"/>'
+            f'<circle cx="{px:.2f}" cy="{py:.2f}" r="{ARO["punto"] + ARO["aire"]}" fill="#000"/></mask>'
+            f'<circle cx="100" cy="100" r="{rc}" fill="none" stroke="{color}" stroke-width="{ARO["trazo"]}" mask="url(#{i})"/>'
+            f'<circle cx="{px:.2f}" cy="{py:.2f}" r="{ARO["punto"]}" fill="{punto}"/></svg>')
 
 
-def perilla(tam=30, cuerpo=CIAN_HONDO, punta=SOL):
-    """El símbolo de la línea: la perilla de Dial con la muesca en la estación de Nuevos mundos."""
-    (x1, y1), (x2, y2) = muesca(50)[0]
-    return (f'<svg class="perilla" width="{tam}" height="{tam}" viewBox="-50 -50 100 100" aria-hidden="true">'
-            f'<circle r="50" fill="{cuerpo}"/><line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{punta}" '
-            f'stroke-width="{muesca(50)[1]}" stroke-linecap="round"/></svg>')
+def textura_uri(clave, fabricar):
+    """Las texturas de cianotipo se generan una vez por corrida (cianotipo.py) y van como WebP con alfa."""
+    if clave not in _cache:
+        b = io.BytesIO()
+        fabricar().save(b, "WEBP", quality=88)
+        _cache[clave] = "data:image/webp;base64," + base64.b64encode(b.getvalue()).decode()
+    return _cache[clave]
+
+
+def emulsion(semilla=1):
+    """La impresión al sol a pincel que cubre la lámina azul: el papel asoma en los bordes."""
+    import cianotipo
+    W, H = aa.W, aa.H
+    return textura_uri(("emulsion", semilla, W, H), lambda: cianotipo.impresion(W, H, (26, 26, W - 26, H - 26), semilla))
+
+
+def mascara_pincel(w=904, h=740, semilla=3):
+    """La máscara de los bordes a pincel para las fotos en cianotipo (opaco = emulsión)."""
+    import cianotipo
+
+    def hacer():
+        a = cianotipo.borde(w, h, (22, 22, w - 22, h - 22), semilla, cola=46)
+        return Image.fromarray(np.dstack([np.full((h, w, 3), 255, np.uint8), (a * 255).astype(np.uint8)]), "RGBA")
+    return textura_uri(("mascara", w, h, semilla), hacer)
+
+
+def ondas(radios, color, ancho=1.4):
+    """Líneas de onda: aros finos concéntricos que se abren desde un punto, como una señal que se propaga."""
+    return "".join(f'<circle r="{r:.1f}" fill="none" stroke="{color}" stroke-opacity="{op:.2f}" stroke-width="{ancho}"/>'
+                   for r, op in radios)
 
 
 CSS = """
@@ -135,7 +177,11 @@ CSS = """
 @font-face{font-family:"ISans";src:url(%(sans)s);font-weight:400 700}
 @font-face{font-family:"Plex";src:url(%(mono)s);font-weight:400}
 :root{--papel:%(papel)s;--tinta:%(tinta)s;--cian:%(cian)s;--sol:%(sol)s;--gris:#59647A;--filete:rgba(20,36,58,.2);--fondo:var(--papel)}
-.cian{--fondo:%(hondo)s;--tinta:#F1EDE3;--cian:%(sol)s;--gris:rgba(241,237,227,.66);--filete:rgba(241,237,227,.22)}
+.cian{--fondo:var(--papel);--tinta:#F1EDE3;--cian:%(sol)s;--gris:rgba(241,237,227,.74);--filete:rgba(241,237,227,.26)}
+.emulsion{position:absolute;inset:0;width:100%%;height:100%%;z-index:0;pointer-events:none}
+.cian .cab,.cian .ficha,.cian .cuerpo,.cian .pie,.cian .cierre-pie{position:relative;z-index:2}
+.placa.cianotipo{background:transparent;-webkit-mask-image:var(--pincel);mask-image:var(--pincel);-webkit-mask-size:100%% 100%%;mask-size:100%% 100%%}
+.ondas-dato{position:absolute;z-index:0;overflow:visible;pointer-events:none}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:%(W)dpx;height:%(H)dpx;overflow:hidden}
 body{font-family:"News",serif;color:var(--tinta);-webkit-font-smoothing:antialiased;font-optical-sizing:auto;
@@ -149,6 +195,7 @@ em{font-style:italic;color:var(--cian)}
 .cab{position:relative;display:flex;justify-content:space-between;align-items:center;height:44px;flex:none;z-index:2}
 .marca{display:flex;align-items:center;gap:14px;font-style:italic;font-size:31px;font-weight:420;letter-spacing:-.008em;color:var(--tinta)}
 .cab img{height:36px}
+.cab .aro{flex:none}
 .ficha{position:relative;z-index:2;flex:none;margin-top:20px;padding-top:14px;border-top:1px solid var(--filete);
   display:flex;justify-content:space-between;align-items:baseline;gap:24px}
 .mono{font-family:"Plex",monospace;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);
@@ -247,7 +294,7 @@ def css(cian=False):
 
 
 def cabecera(oscuro):
-    simbolo = perilla(30) if oscuro else perilla(30, cuerpo=PAPEL, punta=CIAN_HONDO)
+    simbolo = aro(32) if oscuro else aro(32, color=PAPEL)
     return (f'<div class="cab"><div class="marca">{simbolo}{NOMBRE}</div>'
             f'<img src="{logo_uri(36, oscuro)}" alt=""></div>')
 
@@ -273,8 +320,9 @@ def pagina(cfg, lam, n, cuerpo, clase="", con_pie=True):
     cian = lam.get("fondo") == "cian" or "cian" in clase
     clase = (clase + (" cian" if cian and "cian" not in clase else "")).strip()
     abajo = pie(lam) if con_pie else ""
+    fondo = f'<img class="emulsion" src="{emulsion(n)}" alt="">' if cian else ""
     return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"><style>{css()}</style></head>'
-            f'<body><div class="lam {clase}">{cabecera(not cian)}{tira(cfg, lam, n)}{cuerpo}{abajo}</div></body></html>')
+            f'<body><div class="lam {clase}">{fondo}{cabecera(not cian)}{tira(cfg, lam, n)}{cuerpo}{abajo}</div></body></html>')
 
 
 def rotulo(lam):
@@ -323,7 +371,9 @@ def l_foto(cfg, lam, n):
     if lam.get("texto"):
         ley += f'<p class="tx">{rico(lam["texto"])}</p>'
     num = f'Lám. {n:02d}'
-    cuerpo = (f'<div class="cuerpo"><div class="placa">{img_foto(cfg, lam)}{vertical(lam.get("credito", ""), "bottom:16")}</div>'
+    placa = ('<div class="placa cianotipo" style="--pincel:url(' + mascara_pincel(semilla=n) + ')">'
+             if lam.get("tratamiento") == "cianotipo" else '<div class="placa">')
+    cuerpo = (f'<div class="cuerpo">{placa}{img_foto(cfg, lam)}{vertical(lam.get("credito", ""), "bottom:16")}</div>'
               f'<div class="leyenda"><div class="num">{num}</div><div>{ley}</div></div></div>')
     lam = dict(lam, credito="", fuentes=lam.get("fuentes"))
     return pagina(cfg, lam, n, cuerpo)
@@ -347,7 +397,13 @@ def l_dato(cfg, lam, n):
     dato = str(lam["dato"])
     tam = lam.get("tam_dato") or min(330, int(1250 / max(len(dato), 3)))
     c = '<div class="cuerpo centro">' + rotulo(lam)
-    c += (f'<div class="dato-caja" style="--r:{tam * 0.9:.0f}px;margin-top:{tam * 0.1:.0f}px">'
+    r = tam * 0.45  # radio del sol de oro (--r es su diámetro)
+    cx, cy = r - tam * 0.9 * 0.18, r - tam * 0.9 * 0.12  # centro del sol dentro de la caja de la cifra
+    lado = r * 7
+    ondas_svg = (f'<svg class="ondas-dato" width="{lado:.0f}" height="{lado:.0f}" viewBox="{-lado / 2:.0f} {-lado / 2:.0f} {lado:.0f} {lado:.0f}" '
+                 f'style="left:{cx - lado / 2:.0f}px;top:{cy - lado / 2:.0f}px" aria-hidden="true">'
+                 + ondas([(r * k, 0.22 - 0.04 * i) for i, k in enumerate((1.4, 1.9, 2.45, 3.05))], CIAN, 1.3) + '</svg>')
+    c += (f'<div class="dato-caja" style="--r:{tam * 0.9:.0f}px;margin-top:{tam * 0.1:.0f}px">{ondas_svg}'
           f'<div class="dato" style="font-size:{tam}px">{html.escape(dato)}</div></div>')
     if lam.get("unidad"):
         c += f'<div class="unidad">{rico(lam["unidad"])}</div>'
@@ -397,13 +453,11 @@ def l_citas(cfg, lam, n):
 
 
 def orbitas():
-    """El cierre: la perilla de la línea en grande (sin escala alrededor: con marcas vuelve a parecer un sol)."""
-    R = 250
-    s = '<svg class="orbitas" width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true">'
-    (x1, y1), (x2, y2) = muesca(R)[0]
-    s += (f'<circle r="{R}" fill="#1D4677"/><line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{SOL}" '
-          f'stroke-width="{muesca(R)[1]}" stroke-linecap="round"/></svg>')
-    return s
+    """El cierre: el aro de la línea en grande y, alrededor, líneas de onda finas que se abren (la señal)."""
+    s = '<svg class="orbitas" width="1100" height="1100" viewBox="-550 -550 1100 1100" aria-hidden="true">'
+    s += ondas([(r, 0.36 - 0.05 * i) for i, r in enumerate((235, 290, 350, 415, 485))], PAPEL, 1.6)
+    s += '</svg>'
+    return s + aro(400, color=PAPEL, extra=f' style="position:absolute;z-index:1;left:calc(64% - 200px);top:{aa.H - 620}px"')
 
 
 def l_cta(cfg, lam, n):
