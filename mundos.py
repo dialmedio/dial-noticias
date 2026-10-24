@@ -12,8 +12,9 @@ naturaleza, y no se parece a ninguna otra línea de Dial:
 - El archivo está en la estructura: cada pieza es una ficha numerada (N.º), las fotos llevan pie como láminas de un
   libro, el crédito va en vertical al canto de la foto y la lámina `ficha` es la tarjeta de catálogo de la
   investigación (autor, obra, año, qué encontró), con su perforación abajo.
-- El solarpunk está en la luz, no en el adorno: el símbolo es un sol sobre el horizonte; en la portada el canto de
-  la foto es el horizonte y el sol sale de ahí; el cierre es una impresión al sol con órbitas finas (los mundos).
+- El solarpunk está en la luz, no en el adorno: el oro de sol y el papel. El símbolo es la perilla de Dial (propuesta
+  de marca v4) en la estación de la línea: cuerpo azul, muesca de oro, a las 135°. Martín descartó el sol del primer
+  borrador ("se ve como de juego indie"). El cierre es la misma perilla en grande.
 - Lo minimalista: retícula de 8 px, márgenes de 88 px, filetes de un pixel, nada de cajas ni franjas.
 - `"tratamiento": "cianotipo"` en una foto la vuelve impresión al sol (para fotos de archivo, vestigios, planos);
   por defecto las fotos van a color, como las da la realidad.
@@ -26,6 +27,7 @@ de estilo antiguo, líneas equilibradas y comillas colgadas.
 import base64
 import html
 import io
+import math
 import re
 import subprocess
 import sys
@@ -110,12 +112,21 @@ def rico(texto):
     return re.sub(r"\*([^*]+)\*", r"<em>\1</em>", t)
 
 
-def sol(tam=30):
-    """El símbolo de la línea: un sol que sale sobre el horizonte."""
-    return (f'<svg class="sol" width="{tam * 1.6:.0f}" height="{tam}" viewBox="0 0 48 30" aria-hidden="true">'
-            '<clipPath id="sobre"><rect x="0" y="0" width="48" height="21"/></clipPath>'
-            '<circle cx="24" cy="21" r="12" fill="var(--sol)" clip-path="url(#sobre)"/>'
-            '<line x1="2" y1="21.5" x2="46" y2="21.5" stroke="currentColor" stroke-width="1.6"/></svg>')
+ESTACION = 135  # la posición de la línea en el dial de Dial (Dial madre a 45°)
+
+
+def muesca(R, angulo=ESTACION):
+    """Los extremos de la muesca de la perilla (del 36 % al 72 % del radio) y su grueso (0,3 del radio)."""
+    a = math.radians(angulo - 90)
+    return [(round(f * R * math.cos(a), 2), round(f * R * math.sin(a), 2)) for f in (0.36, 0.72)], round(0.3 * R, 2)
+
+
+def perilla(tam=30, cuerpo=CIAN_HONDO, punta=SOL):
+    """El símbolo de la línea: la perilla de Dial con la muesca en la estación de Nuevos mundos."""
+    (x1, y1), (x2, y2) = muesca(50)[0]
+    return (f'<svg class="perilla" width="{tam}" height="{tam}" viewBox="-50 -50 100 100" aria-hidden="true">'
+            f'<circle r="50" fill="{cuerpo}"/><line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{punta}" '
+            f'stroke-width="{muesca(50)[1]}" stroke-linecap="round"/></svg>')
 
 
 CSS = """
@@ -137,7 +148,6 @@ body{font-family:"News",serif;color:var(--tinta);-webkit-font-smoothing:antialia
 em{font-style:italic;color:var(--cian)}
 .cab{position:relative;display:flex;justify-content:space-between;align-items:center;height:44px;flex:none;z-index:2}
 .marca{display:flex;align-items:center;gap:14px;font-style:italic;font-size:31px;font-weight:420;letter-spacing:-.008em;color:var(--tinta)}
-.marca .sol{color:var(--tinta)}
 .cab img{height:36px}
 .ficha{position:relative;z-index:2;flex:none;margin-top:20px;padding-top:14px;border-top:1px solid var(--filete);
   display:flex;justify-content:space-between;align-items:baseline;gap:24px}
@@ -159,13 +169,11 @@ h1 em,h2 em{font-weight:340}
 p.baj{font-size:31px;line-height:1.34;color:var(--gris);font-weight:400;text-wrap:pretty;margin-top:22px;max-width:820px}
 p.tx{font-size:35px;line-height:1.4;font-weight:380;text-wrap:pretty;margin-top:30px;max-width:860px}
 p.tx.gris{color:var(--gris)}
-/* portada: la foto a sangre arriba, el canto es el horizonte y el sol sale de ahí */
+/* portada: la foto a sangre arriba y el titular en papel */
 .por-foto{position:absolute;left:0;right:0;top:0;height:%(HF)dpx;overflow:hidden;z-index:1}
 .por-foto img{width:100%%;height:100%%;object-fit:cover;display:block}
 .por-foto::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,20,34,.42),rgba(10,20,34,0) 19%%)}
-.portada .cab .marca,.portada .cab .marca .sol{color:#F1EDE3}
-.horizonte{position:absolute;z-index:3;left:88px;top:%(HF)dpx;width:84px;height:42px;transform:translateY(-100%%);overflow:hidden}
-.horizonte::before{content:"";position:absolute;left:0;top:0;width:84px;height:84px;border-radius:50%%;background:var(--sol)}
+.portada .cab .marca{color:#F1EDE3}
 .vertical{position:absolute;z-index:3;right:22px;writing-mode:vertical-rl;transform:rotate(180deg);
   font-family:"Plex",monospace;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:rgba(241,237,227,.9);white-space:nowrap;
   text-shadow:0 0 6px rgba(10,20,34,.45)}
@@ -219,7 +227,7 @@ blockquote cite{display:flex;gap:14px;align-items:center;font-style:normal;font-
 blockquote cite::before{content:"";width:40px;height:1px;background:var(--gris)}
 blockquote+blockquote{margin-top:70px}
 /* cierre: impresión al sol con órbitas */
-.orbitas{position:absolute;z-index:1;left:50%%;top:%(HO)dpx;transform:translate(-50%%,-50%%)}
+.orbitas{position:absolute;z-index:1;left:64%%;top:%(HO)dpx;transform:translate(-50%%,-50%%)}
 .cierre-pie{position:relative;z-index:2;flex:none;display:flex;justify-content:space-between;align-items:flex-end}
 .acciones{font-family:"ISans";font-weight:600;font-size:19px;letter-spacing:.17em;text-transform:uppercase;display:flex;gap:30px;margin-bottom:20px}
 .acciones span:first-child{color:var(--sol)}
@@ -235,11 +243,12 @@ def css(cian=False):
                   "mono": datos(RAIZ / "fuentes/IBMPlexMono-Regular.ttf", "font/ttf"),
                   "papel": PAPEL, "tinta": TINTA, "cian": CIAN, "hondo": CIAN_HONDO, "sol": SOL,
                   "W": W, "H": H, "T": max(aa.T, 56), "B": max(aa.B - 58, 52), "Rd": 88 + aa.R,
-                  "HF": round(H * 0.6), "HO": H - 210}
+                  "HF": round(H * 0.6), "HO": H - 420}
 
 
 def cabecera(oscuro):
-    return (f'<div class="cab"><div class="marca">{sol(28)}{NOMBRE}</div>'
+    simbolo = perilla(30) if oscuro else perilla(30, cuerpo=PAPEL, punta=CIAN_HONDO)
+    return (f'<div class="cab"><div class="marca">{simbolo}{NOMBRE}</div>'
             f'<img src="{logo_uri(36, oscuro)}" alt=""></div>')
 
 
@@ -286,7 +295,7 @@ def vertical(texto, donde):
 # ------------------------------------------------------------ láminas
 
 def l_portada(cfg, lam, n):
-    """La foto a sangre en la parte de arriba, el sol en el horizonte y el titular en papel."""
+    """La foto a sangre en la parte de arriba y el titular en papel."""
     total = len(cfg.get("laminas", [])) or n
     largo = len(re.sub(r"[*]", "", lam["titulo"]))
     tam = (108 if largo <= 24 else 92 if largo <= 40 else 78) * lam.get("escala", 1.0)
@@ -300,7 +309,7 @@ def l_portada(cfg, lam, n):
     texto += (f'<div class="pie"><span class="mono">{izq}{meta}</span>'
               f'<span class="mono">{n:02d} / {total:02d}</span></div>')
     foto = f'<div class="por-foto">{img_foto(cfg, lam)}</div>' if lam.get("foto") else ""
-    cuerpo = (f'{foto}{vertical(lam.get("credito", ""), "bottom:" + str(aa.H - round(aa.H * 0.6) + 22))}<div class="horizonte"></div>'
+    cuerpo = (f'{foto}{vertical(lam.get("credito", ""), "bottom:" + str(aa.H - round(aa.H * 0.6) + 22))}'
               f'<div class="por-texto">{texto}</div>')
     return (f'<!doctype html><html lang="es"><head><meta charset="utf-8"><style>{css()}</style></head>'
             f'<body><div class="lam portada">{cabecera(False)}{cuerpo}</div></body></html>')
@@ -388,13 +397,12 @@ def l_citas(cfg, lam, n):
 
 
 def orbitas():
-    """Órbitas finas alrededor de un sol que sale: los mundos posibles."""
-    W = aa.W
-    s = (f'<svg class="orbitas" width="{W * 2}" height="{W * 2}" viewBox="-1000 -1000 2000 2000" aria-hidden="true">')
-    for k, r in enumerate((150, 280, 430, 600, 790, 990)):
-        s += f'<circle r="{r}" fill="none" stroke="rgba(241,237,227,{0.26 - k * 0.03:.2f})" stroke-width="1.3"/>'
-    s += '<circle r="78" fill="var(--sol)"/><circle cx="430" cy="0" r="9" fill="#F1EDE3"/>'
-    s += '<circle cx="-280" cy="0" r="6" fill="var(--sol)"/></svg>'
+    """El cierre: la perilla de la línea en grande (sin escala alrededor: con marcas vuelve a parecer un sol)."""
+    R = 250
+    s = '<svg class="orbitas" width="1000" height="1000" viewBox="-500 -500 1000 1000" aria-hidden="true">'
+    (x1, y1), (x2, y2) = muesca(R)[0]
+    s += (f'<circle r="{R}" fill="#1D4677"/><line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{SOL}" '
+          f'stroke-width="{muesca(R)[1]}" stroke-linecap="round"/></svg>')
     return s
 
 
