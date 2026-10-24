@@ -701,8 +701,9 @@ def lamina(cfg, lam, n):
     estilo = estilo_de(lam)
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
-    if lam.get("recorte"):
-        pegar_recorte(im, cfg, lam["recorte"], n)
+    recortes = lam.get("recorte") or []
+    for k, rc in enumerate([recortes] if isinstance(recortes, dict) else recortes):  # uno o varios (p. ej. los dos candidatos)
+        pegar_recorte(im, cfg, rc, n + 3 * k)
     return im.convert("RGB")
 
 
