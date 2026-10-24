@@ -7,7 +7,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 - **Kit público:** https://github.com/dialmedio/dial-noticias. En un sandbox: `git clone --depth 1 https://github.com/dialmedio/dial-noticias` (o bajar `https://github.com/dialmedio/dial-noticias/archive/refs/heads/main.zip`). Si no hay internet en el sandbox, pedirle a Martín que adjunte el zip del kit.
 - **En el PC de Martín (Claude Code):** el kit está en `D:\Claude Code\dial-noticias\`. Las fotos van a `D:\AA Dialmedio\Noticias\Al Aire\<AAAA-MM-DD> <Tema>\fuentes\` y el JSON a `noticias/<AAAA-MM-DD>-<tema>.json`, con `salida` = la carpeta de la noticia.
 - **En el sandbox:** ejecutar `pip install pillow numpy` si falta algo y trabajar con rutas relativas: el JSON va junto a las fotos (o con rutas relativas a ellas), y la salida por defecto es `salida/` junto al JSON. Los videos usan ffmpeg: si no está instalado, el generador instala `imageio-ffmpeg` por su cuenta.
-- Uso: `python dial_noticias.py <noticia>.json [--solo=2,4]`. Genera `<prefijo>-NN.jpg` (o `.mp4` si la lámina es un video) y `<prefijo>.zip` con todo.
+- Uso: `python dial_noticias.py <noticia>.json [--solo=2,4]`. Genera `<prefijo>-NN.jpg` (o `.mp4` si la lámina es un video). Con `--zip` agrega `<prefijo>.zip` con todo: solo en el flujo del celular, para bajar el carrusel de una vez; en el PC no se usa (Martín, 25 oct 2026: ocupa espacio sin necesidad).
 
 ## Diseño: Al Aire v2 (vigente desde el 18 oct 2026)
 
@@ -217,7 +217,7 @@ Guardar todo en `<prefijo>-descripcion.md` con una sección final **Fuentes (par
 
 ## 7. Entregar (en este orden y sin pedir confirmación)
 
-1. Las láminas y los videos (y el `.zip`) para descargar, numerados en el orden de subida.
+1. Las láminas y los videos para descargar, numerados en el orden de subida (y el `.zip`, solo en el celular).
 2. La descripción de Instagram en un bloque de código, para copiarla con un toque.
 3. La descripción de TikTok en otro bloque de código.
 4. Notas breves: dudas, discrepancias entre fuentes, qué se dejó por fuera y por qué.

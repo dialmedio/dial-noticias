@@ -4,7 +4,7 @@ PASO 0 · KIT
 - Baja el kit público: `git clone --depth 1 https://github.com/dialmedio/dial-noticias` (o https://github.com/dialmedio/dial-noticias/archive/refs/heads/main.zip). Si no tienes internet en el sandbox, pídeme que adjunte el zip del kit y no improvises un diseño.
 - Si estás en el PC de Martín (Claude Code), usa `D:\Claude Code\dial-noticias\` y guarda en `D:\AA Dialmedio\Noticias\Al Aire\<AAAA-MM-DD> <Tema>\`.
 - Lee completo `SISTEMA.md` antes de hacer cualquier otra cosa. Es la fuente de verdad. No rediseñes, no cambies tamaños, colores ni tipografías y no escribas otro generador: solo escribes el JSON y los textos.
-- Instala pillow y numpy si faltan (para video, el generador instala ffmpeg solo). Uso: `python dial_noticias.py <noticia>.json [--solo=2,4]`.
+- Instala pillow y numpy si faltan (para video, el generador instala ffmpeg solo). Uso: `python dial_noticias.py <noticia>.json --zip [--solo=2,4]` (en el celular, siempre con `--zip`).
 
 PASO 1 · INVESTIGAR Y VERIFICAR
 - Calcula la fecha real del hecho con la fecha de hoy ("ayer", "anoche").
@@ -26,7 +26,7 @@ PASO 3 · GENERAR Y REVISAR
 - Mira cada lámina (en los videos, saca un fotograma). Si el texto tapa caras o carteles importantes, usa "ancho" o cambia el orden. Revisa también que nada se salga del cuadro, que no queden palabras sueltas en el título, que el color se vea natural (si no, usa "ajuste") y que se lea a tamaño de celular. Corrige y regenera con --solo.
 
 PASO 4 · ENTREGAR (en este orden)
-1. Las láminas y los videos numerados en el orden de subida, y el .zip, como archivos descargables.
+1. Las láminas y los videos numerados en el orden de subida, y el .zip (genera con `--zip`), como archivos descargables.
 2. La descripción de Instagram en un bloque de código: máximo 2.200 caracteres, con gancho, contexto, "📍 La versión del Gobierno" (o de la contraparte), "📍 Cómo terminó" (o "📍 Qué sigue"), el crédito y máximo 5 hashtags que terminen en #DialMedio.
 3. La descripción de TikTok en otro bloque de código: de 400 a 700 caracteres, un emoji al inicio y de 4 a 6 hashtags que terminen en #DialMedio.
 4. Notas breves: dudas, discrepancias entre fuentes, qué dejaste por fuera, y las fuentes con su URL (estas no se publican).

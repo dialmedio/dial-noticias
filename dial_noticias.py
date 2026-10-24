@@ -712,7 +712,7 @@ def main():
             tam = im.size
         hechas.append(ruta)
         print(ruta, tam)
-    if not solo:  # un zip con todo el carrusel, cómodo para bajar al celular
+    if not solo and "--zip" in sys.argv:  # zip solo a pedido (flujo del celular); en el PC sobra (Martín, 25 oct 2026)
         import zipfile
         zz = salida / f"{cfg.get('prefijo', 'lamina')}.zip"
         with zipfile.ZipFile(zz, "w") as z:
