@@ -5,7 +5,7 @@ Martín manda foto(s), contexto y enfoque. Claude investiga, verifica, arma el c
 ## 0. Preparar
 
 - **Kit público:** https://github.com/dialmedio/dial-noticias. En un sandbox: `git clone --depth 1 https://github.com/dialmedio/dial-noticias` (o bajar `https://github.com/dialmedio/dial-noticias/archive/refs/heads/main.zip`). Si no hay internet en el sandbox, pedirle a Martín que adjunte el zip del kit.
-- **En el PC de Martín (Claude Code):** el kit está en `D:\Claude Code\dial-noticias\`. Las fotos van a `D:\AA Dialmedio\AudiovisualDial\Noticias\<AAAA-MM-DD> <Tema>\fuentes\` y el JSON a `noticias/<AAAA-MM-DD>-<tema>.json`, con `salida` = la carpeta de la noticia.
+- **En el PC de Martín (Claude Code):** el kit está en `D:\Claude Code\dial-noticias\`. Las fotos van a `D:\AA Dialmedio\Noticias\Al Aire\<AAAA-MM-DD> <Tema>\fuentes\` y el JSON a `noticias/<AAAA-MM-DD>-<tema>.json`, con `salida` = la carpeta de la noticia.
 - **En el sandbox:** ejecutar `pip install pillow numpy` si falta algo y trabajar con rutas relativas: el JSON va junto a las fotos (o con rutas relativas a ellas), y la salida por defecto es `salida/` junto al JSON. Los videos usan ffmpeg: si no está instalado, el generador instala `imageio-ffmpeg` por su cuenta.
 - Uso: `python dial_noticias.py <noticia>.json [--solo=2,4]`. Genera `<prefijo>-NN.jpg` (o `.mp4` si la lámina es un video) y `<prefijo>.zip` con todo.
 
@@ -80,6 +80,15 @@ Martín pidió un diseño "más inspirado para mostrar fotografía", con un tint
 - **Créditos:** obra, autor, año y licencia (`José Guadalupe Posada, Calavera maderista, ca. 1910 · National Gallery of Art · CC0`). Derechos de las obras: ver el perfil de la línea.
 - **Descripción:** `📍 La obra` (ficha) en lugar de la versión del Gobierno y `📍 Hoy`; hashtags con `#ArteYMemoria` y `#DialMedio` al final.
 - Ejemplo: `ejemplo/arte-muestra.json` (muestra de diseño, sin historia real).
+
+## Línea Tecnología y poder (v2, 25 oct 2026)
+
+La política de la tecnología (hackeos, vigilancia, regulación, plataformas, minerales críticos), sobre todo internacional. Sale los miércoles desde la mesa de Al Aire (tema `tecnologia`). Se activa con `"seccion": "tecnologia"`; la compone `tecnologia.py` en **HTML/CSS y la renderiza Chrome** (como el Expediente): necesita Chrome instalado (en el PC de Martín está; en un sandbox sin Chrome, usar el diseño de Al Aire). Martín pidió algo minimalista inspirado en X, con tipografía elegante e impactante; cada sección con su plantilla para que el perfil no se sienta repetido.
+
+- **Tipografía:** Geist y Geist Mono (Vercel, OFL). Titulares en SemiBold con interletra negativa (−4,7 %) y líneas equilibradas; cifras grandes en ExtraLight; etiquetas en mono espaciada. Nunca menos de 17 px.
+- **Color:** casi negro, casi blanco, gris para lo secundario y un solo acento verde señal (`*así*`). Nada de franjas, cajas ni texturas.
+- **Láminas:** `portada` (titular, bajada y la foto en tarjeta redondeada, en blanco y negro; `"color": true` la deja a color), `foto` (tarjeta + texto; `"posicion": "arriba"` invierte), `post` (lámina de texto: `rotulo`, `titulo`, `texto` y, para "cómo funciona", `items` numerados), `dato` (`dato`, `unidad`, `texto`), `citas` (cita con comilla colgada; nunca como si fuera un post de X de alguien real) y `cta`. Numeración 01 / 07 abajo.
+- `"meta"`: `PAÍS · DD MES` (o `MUNDO · DD MES`). Muestra de referencia: `noticias/2026-10-25-tec-muestra-urna-brasil.json`.
 
 ## 1. Investigar y verificar (antes de escribir una sola lámina)
 

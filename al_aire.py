@@ -698,6 +698,9 @@ def lamina(cfg, lam, n):
     if cfg.get("seccion") == "arte":
         import arte
         return arte.lamina(cfg, lam, n).convert("RGB")
+    if cfg.get("seccion") == "tecnologia":
+        import tecnologia
+        return tecnologia.lamina(cfg, lam, n).convert("RGB")
     estilo = estilo_de(lam)
     fn = ESTILOS[estilo]
     im = fn(cfg, lam) if estilo in ("portada", "foto") else fn(cfg, lam, n)
