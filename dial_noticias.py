@@ -647,7 +647,9 @@ def video(cfg, lam, n, ruta_salida):
         fondo.save(Path(tmp) / "capa.png")
         filtros += [f"scale={W}:{H}:flags=lanczos", "format=gbrp", "lut3d=file=look.cube",
                     "unsharp=5:5:0.35"]
-        grafo = f"[0:v]{','.join(filtros)}[v];[v][1:v]overlay=0:0:format=auto,format=yuv420p[sal]"
+        # sidedata: los píxeles ya salen girados; sin borrar la marca de rotación del celular,
+        # el reproductor vuelve a girar el video
+        grafo = f"[0:v]{','.join(filtros)}[v];[v][1:v]overlay=0:0:format=auto,format=yuv420p,sidedata=delete:type=DISPLAYMATRIX[sal]"
         cmd = [ff, "-hide_banner", "-loglevel", "error", "-y", "-i", str(ruta),
                "-loop", "1", "-i", "capa.png", "-filter_complex", grafo, "-map", "[sal]", "-map", "0:a?",
                "-shortest", "-c:v", "libx264", "-preset", "medium", "-crf", "21", "-maxrate", "9M",
