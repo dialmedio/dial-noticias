@@ -1,11 +1,13 @@
 """Generador de piezas de noticias de Dial Medio.
 
 Uso:
-    python dial_noticias.py noticias/<noticia>.json [--solo=1,3]
+    python dial_noticias.py noticias/<noticia>.json [--solo=1,3] [--video]
 
 Cada lámina respeta la proporción de su foto o video. Lado corto = 1080 px.
-Si "foto" es un video (.mp4, .mov...), sale el video completo con la misma
-colorización (como LUT) y el mismo diseño encima, con su audio.
+Si "foto" es un video (.mp4, .mov...), por defecto sale solo la capa del diseño
+en PNG transparente (<nombre>-capa.png) más una muestra sobre un fotograma, y
+Martín la pone encima del video en su editor. Con --video sale el video completo
+con la misma colorización (como LUT) y el diseño encima, con su audio.
 Sin grano: Martín prefiere la imagen limpia (el grano se veía como baja calidad).
 """
 import json
@@ -659,6 +661,34 @@ def video(cfg, lam, n, ruta_salida):
     return W, H
 
 
+def capa(cfg, lam, ruta_png):
+    """Solo el diseño sobre transparente (PNG), para que Martín lo ponga encima del video en su
+    editor. Es lo que se hace por defecto desde el 26 oct 2026: no recomprime el video y gasta poco.
+    Deja también <nombre>-muestra.jpg (la capa sobre un fotograma) para revisarla."""
+    ff = ffmpeg()
+    ruta = (cfg["_base"] / lam["foto"]).resolve()
+    dur = _duracion(ff, ruta)
+    cuadro = _fotograma(ff, ruta, dur * 0.3 if dur > 1 else 0)
+    formato = lam.get("formato", cfg.get("formato"))
+    if formato:
+        cuadro = recortar(cuadro, formato, lam.get("foco") or (0.5, 0.5))
+    W0, H0 = cuadro.size
+    esc = LADO_CORTO / min(W0, H0)
+    W, H = round(W0 * esc / 2) * 2, round(H0 * esc / 2) * 2
+    if cfg.get("estilo", "v2") == "v2":
+        import al_aire
+        im = al_aire.capa_video(cfg, lam, W, H)
+    else:
+        im, frente = graficos(cfg, lam, W, H, video=True)
+        im.alpha_composite(frente)
+    im.save(ruta_png, optimize=True)
+    muestra = cuadro.resize((W, H), Image.LANCZOS).convert("RGBA")
+    muestra.alpha_composite(im)
+    muestra.convert("RGB").save(Path(ruta_png).with_name(Path(ruta_png).stem.replace("-capa", "") + "-muestra.jpg"),
+                                quality=90)
+    return W, H
+
+
 def _caja(W, H, formato, foco):
     """Esquina superior izquierda del recorte que haría recortar()."""
     a, b = (float(x) for x in formato.split(":"))
@@ -704,6 +734,10 @@ def main():
             ruta = salida / f"{nombre}.jpg"
             im.save(ruta, quality=94, subsampling=0, optimize=True)
             tam = im.size
+        elif es_video and "--video" not in sys.argv:
+            # por defecto, solo la capa PNG; el video montado, solo si Martín lo pide (--video)
+            ruta = salida / f"{nombre}-capa.png"
+            tam = capa(cfg, lam, ruta)
         elif es_video:
             ruta = salida / f"{nombre}.mp4"
             tam = video(cfg, lam, n, ruta)
