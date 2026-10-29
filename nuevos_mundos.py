@@ -9,6 +9,10 @@ grandes, datos limpios), La Linterna (impresión) y Mutante (riso de dos tintas)
 - Fotos de las láminas sin foto en riso de dos tintas (eucalipto y brasa), sin grano.
 - Rótulos sin caja: una hoja y el texto en mono, como los antetítulos del Guardian.
 - La misma estructura de Al Aire: cabecera, logo, crédito abajo, lámina final de pregunta.
+
+v3 (29 oct 2026): más fotográfica y artística. Foto de fondo en todas las láminas con textura de
+película (pelicula()), la lámina `reflexion` (pregunta y prosa sobre la foto, sin listas), el aro de
+Dial en lugar de la hoja y más aire entre titular y texto.
 """
 import sys
 from pathlib import Path
@@ -128,24 +132,52 @@ def espaciado(d, x, y, texto, f, fill, tracking=0.14, sombra=False):
     return x
 
 
+def aro(img, cx, cy, d, color, punto=BRASA, angulo=90):
+    """El símbolo de Dial (marca v4, el aro con punto) en la estación de Termómetro: el punto a 90°,
+    a la derecha. Reemplaza a la hoja desde el 29 oct 2026 (lo pidió Martín). Medidas de
+    dial-web/src/lib/aro.mjs, en una caja de 200: R 84, trazo 22,4, punto 24,9, aire 9,4.
+    d = lado de la caja en px; (cx, cy) = su centro."""
+    s = 4
+    tam = round(d * s)
+    k = tam / 200
+    c = tam / 2
+    rc, trazo, rp, aire = (84 - 11.2) * k, 22.4 * k, 24.9 * k, 9.4 * k
+    a = np.radians(angulo - 90)
+    px, py = c + rc * np.cos(a), c + rc * np.sin(a)
+    anillo = Image.new("L", (tam, tam), 0)
+    da = ImageDraw.Draw(anillo)
+    da.ellipse([c - rc - trazo / 2, c - rc - trazo / 2, c + rc + trazo / 2, c + rc + trazo / 2], fill=255)
+    da.ellipse([c - rc + trazo / 2, c - rc + trazo / 2, c + rc - trazo / 2, c + rc - trazo / 2], fill=0)
+    da.ellipse([px - rp - aire, py - rp - aire, px + rp + aire, py + rp + aire], fill=0)
+    bola = Image.new("L", (tam, tam), 0)
+    ImageDraw.Draw(bola).ellipse([px - rp, py - rp, px + rp, py + rp], fill=255)
+    capa = Image.new("RGBA", (tam, tam), tuple(color[:3]) + (0,))
+    capa.putalpha(anillo)
+    p = Image.new("RGBA", (tam, tam), tuple(punto[:3]) + (0,))
+    p.putalpha(bola)
+    capa.alpha_composite(p)
+    capa = capa.resize((round(d), round(d)), Image.LANCZOS)
+    img.alpha_composite(capa, (round(cx - d / 2), round(cy - d / 2)))
+
+
 def antetitulo(img, x, y, texto, color, hoja=None, sombra=False):
-    """Antetítulo como en prensa: una hoja y el texto en sans espaciada, sin caja. y = línea base.
-    Sobre fotos y verdes, el texto va en papel y solo la hoja en brasa."""
-    aa.hoja(img, x + 10, y - 8, 10, hoja or color)
-    espaciado(ImageDraw.Draw(img), x + 28, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
+    """Antetítulo como en prensa: el aro de Dial y el texto en sans espaciada, sin caja. y = línea base.
+    Sobre fotos y verdes, el texto va en papel y el aro también, con el punto en brasa."""
+    aro(img, x + 10, y - 8, 22, color, hoja or BRASA)
+    espaciado(ImageDraw.Draw(img), x + 30, y, texto.upper(), dn.sans(21, 650, 100), color, sombra=sombra)
 
 
 def cabecera(img, meta, fondo="foto"):
     """Cabecera de sección, como la de un periódico (22 oct 2026: las cajas se veían "muy digitales"):
-    la hoja brasa y "Termómetro" en serif cursiva, el logo a la derecha, un filete fino
+    el aro de Dial y "Termómetro" en serif cursiva, el logo a la derecha, un filete fino
     a todo el ancho y debajo la fecha en versalitas. fondo: "foto", "claro" (papel) u "oscuro" (verdes)."""
     W, H, M, T, R = g("W"), g("H"), g("M"), g("T"), g("R")
     if fondo == "foto":
         img.alpha_composite(dn.degradado_superior(W, H, hasta=(T + 230) / H, fuerza=0.8))
     tinta = CARBON if fondo == "claro" else PAPEL
     d = ImageDraw.Draw(img)
-    aa.hoja(img, M + 12, T + 19, 12, BRASA)
-    d.text((M + 34, T + 33), "Termómetro", font=cursiva(40), fill=tinta, anchor="ls")
+    aro(img, M + 16, T + 19, 36, tinta)
+    d.text((M + 42, T + 33), "Termómetro", font=cursiva(40), fill=tinta, anchor="ls")
     lg = dn.logo(36)
     if fondo == "claro":
         a = np.asarray(lg).copy()
@@ -191,18 +223,66 @@ def banda(cfg, lam, tam):
     if lam.get("riso"):
         return riso(Image.open(ruta).convert("RGB"), tam, foco)
     foto = dn.preparar_foto(ruta, lam.get("ajuste"), f"{tam[0]}:{tam[1]}", foco)
-    return foto.resize(tam, Image.LANCZOS).convert("RGBA")
+    return pelicula(foto.resize(tam, Image.LANCZOS).convert("RGBA"), sum(tam), cfg)
+
+
+# ------------------------------------------------------------ película (29 oct 2026)
+
+def pelicula(img, semilla, cfg=None, fuerza=1.0):
+    """Textura de foto análoga. Martín, 29 oct 2026: foto de fondo en todas las láminas, "con una textura
+    de foto análoga", más fotográfico que de infografía. El 18 oct el ruido digital se había visto de baja
+    calidad, así que esto imita la película y no el sensor: negros levantados, sombras un poco cálidas,
+    un halo rojizo alrededor de las luces (halación) y un grano fino que se agrupa, más visible en los
+    medios tonos y casi sin color. Va sobre la foto y antes del texto, que queda nítido.
+    "pelicula": false en el JSON la apaga."""
+    if cfg is not None and cfg.get("pelicula") is False:
+        return img
+    a = np.asarray(img.convert("RGB"), np.float32) / 255
+    h, w = a.shape[:2]
+    lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
+    luz = np.clip((lum - 0.7) / 0.3, 0, 1)
+    halo = Image.fromarray((luz * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(max(4, w * 0.011)))
+    a = a + (np.asarray(halo, np.float32) / 255)[..., None] * np.array([0.22, 0.075, 0.02], np.float32) * fuerza
+    a = 0.04 + a * 0.92  # negros levantados y luces que no queman, como en el papel
+    a = a + ((1 - lum) ** 2)[..., None] * np.array([0.02, 0.008, -0.014], np.float32) * fuerza
+    rng = np.random.default_rng(semilla)
+    gw, gh = max(2, round(w / 1.6)), max(2, round(h / 1.6))
+    grano = np.asarray(Image.fromarray(rng.normal(0, 1, (gh, gw)).astype(np.float32), "F").resize((w, h), Image.BICUBIC))
+    color = np.stack([np.asarray(Image.fromarray(rng.normal(0, 1, (gh // 2, gw // 2)).astype(np.float32), "F")
+                                 .resize((w, h), Image.BICUBIC)) for _ in range(3)], -1)
+    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.042 * fuerza
+    a = a + grano[..., None] * peso[..., None] + color * 0.006 * fuerza
+    out = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
+    if img.mode == "RGBA":
+        out.putalpha(img.getchannel("A"))
+    return out
+
+
+def foto_fondo(cfg, lam, n):
+    """La foto de la lámina, a sangre y con película (en video va sin, porque la capa es transparente)."""
+    img = aa.foto_base(cfg, lam)
+    return img if lam.get("_video") else pelicula(img, 300 + n, cfg)
+
+
+def parrafo_serif(img, x, y, contenido, tam, ancho, color, cursiva_=True, inter=1.18):
+    """Texto corrido en Instrument Serif (cursiva por defecto). Devuelve la y final."""
+    f = cursiva(tam) if cursiva_ else serif(tam)
+    d = ImageDraw.Draw(img)
+    for linea in aa.partir(contenido, f, ancho):
+        d.text((x, y + tam * 0.86), linea, font=f, fill=color, anchor="ls")
+        y += tam * inter
+    return y
 
 
 # ------------------------------------------------------------ láminas
 
 def l_portada(cfg, lam, n):
     W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
-    img = aa.foto_base(cfg, lam)
+    img = foto_fondo(cfg, lam, n)
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tam = 116 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
-    alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (26 + aa.alto_texto(baj, 38, ancho - 40) if baj else 0)
+    alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (40 + aa.alto_texto(baj, 38, ancho - 40) if baj else 0)
     y = H - B - alto
     # el degradado arranca un poco antes del texto, por alto que sea el bloque (cielos claros)
     img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 480) / H), fuerza=0.85))  # velo largo
@@ -211,21 +291,21 @@ def l_portada(cfg, lam, n):
     if lam.get("rotulo"):
         antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA, sombra=True)
     y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98)
-    if baj:
-        aa.texto(img, M, y + 26, baj, 38, ancho - 40, PAPEL + (235,))
+    if baj:  # 29 oct 2026: más aire entre el titular y el texto
+        aa.texto(img, M, y + 40, baj, 38, ancho - 40, PAPEL + (235,))
     pie(img, aa.credito(lam), PAPEL + (190,))
     return img
 
 
 def l_foto(cfg, lam, n):
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    img = aa.foto_base(cfg, lam)
+    img = foto_fondo(cfg, lam, n)
     arriba = lam.get("posicion") == "arriba"
     if arriba:
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.58, fuerza=0.86))
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tx, tt = lam.get("texto", ""), lam.get("titulo", "")
-    alto = (alto_titular(tt, 92, ancho) + 16 if tt else 0) + aa.alto_texto(tx, 40, ancho)
+    alto = (alto_titular(tt, 92, ancho) + 34 if tt else 0) + aa.alto_texto(tx, 40, ancho)
     y = H - B - alto if not arriba else T + 200
     if not arriba:
         aa.degradado_bajo(img, max(0.2, (y - 170) / H), 0.92)
@@ -233,7 +313,7 @@ def l_foto(cfg, lam, n):
     if lam.get("rotulo"):
         antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA, sombra=True)
     if tt:
-        y = titular(img, M, y, tt, 92, ancho) + 16
+        y = titular(img, M, y, tt, 92, ancho) + 34
     aa.texto(img, M, y, tx, 40, ancho, PAPEL + (240,))
     personas = lam.get("persona") or []
     for p in ([personas] if isinstance(personas, dict) else personas):
@@ -276,7 +356,7 @@ def l_ficha(cfg, lam, n):
     if lam.get("destacado"):  # la idea que explica la lámina, en cursiva sobre franja brasa
         y = titular(capa, M + 6, y + 4, "*" + lam["destacado"].strip("*") + "*", 66, ancho - 12, color=CARBON, franja=BRASA) + 30
     if lam.get("titulo"):
-        y = titular(capa, M, y, lam["titulo"], 84 * lam.get("escala", 1.0), ancho, color=CARBON, franja=SALVIA) + 22
+        y = titular(capa, M, y, lam["titulo"], 84 * lam.get("escala", 1.0), ancho, color=CARBON, franja=SALVIA) + 36
     if lam.get("texto"):
         y = aa.texto(capa, M, y, lam["texto"], 38, ancho, CARBON) + 22
     if lam.get("campos"):
@@ -475,7 +555,7 @@ def l_dos(cfg, lam, n):
     fn, fc = serif(50), dn.sans(17, 650, 100)
     for k, p in enumerate(lam["personas"]):
         foto = dn.preparar_foto(cfg["_base"] / p["foto"], p.get("ajuste"), f"{an}:{alto}", p.get("foco")).convert("RGBA")
-        foto = foto.resize((an, alto), Image.LANCZOS)
+        foto = pelicula(foto.resize((an, alto), Image.LANCZOS), 500 + n + k, cfg)
         foto.alpha_composite(dn.degradado_inferior(an, alto, desde=0.55, fuerza=0.85))
         dd = ImageDraw.Draw(foto)
         dd.text((M * 0.6, alto - 64), p["nombre"], font=fn, fill=PAPEL, anchor="ls")
@@ -498,10 +578,65 @@ def l_dos(cfg, lam, n):
     return img
 
 
-def l_cta(cfg, lam, n):
-    """Cierre: la pregunta para comentar, en serif sobre eucalipto hondo, con el signo en cursiva brasa."""
+def l_reflexion(cfg, lam, n):
+    """Foto a sangre con película y una pregunta que se explora en prosa. Martín, 29 oct 2026: foto de
+    fondo en todas las láminas, un diseño más artístico y fotográfico que de infografía, y textos que se
+    lean como reflexión y no como lista; más aire entre el titular y el texto.
+    rotulo, titulo (la pregunta, con *acento*), texto (párrafos separados por una línea en blanco),
+    citas [{texto, autor}], pregunta (remate en serif cursiva con filete brasa).
+    "posicion": "arriba", "centro" o "abajo" (por defecto); "oscuro" (0 a 1, 0.42 por defecto) apaga la foto."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    img = aa.campo(EUCALIPTO_HONDO, 40 + n, 0.04)
+    img = foto_fondo(cfg, lam, n)
+    img.alpha_composite(Image.new("RGBA", (W, H), CARBON + (round(255 * lam.get("oscuro", 0.42)),)))
+    ancho = W - 2 * M - R
+    capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(capa)
+    y = 0
+    if lam.get("rotulo"):
+        antetitulo(capa, M, y + 24, lam["rotulo"], PAPEL, BRASA, sombra=True)
+        y += 64
+    if lam.get("titulo"):
+        y = titular(capa, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho) + 44
+    for k, par in enumerate(p for p in lam.get("texto", "").split("\n\n") if p.strip()):
+        y = aa.texto(capa, M, y + (24 if k else 0), par.strip(), 40, ancho, PAPEL + (242,), inter=1.3)
+    fa = dn.sans(23, 600, 96)
+    for k, c in enumerate(lam.get("citas", [])):
+        y += 46 if (k or lam.get("texto")) else 0
+        d.text((M - 4, y + 118), "“", font=serif(180), fill=BRASA, anchor="ls")
+        r = rico_serif(c["texto"], 56, PAPEL, 1.08)
+        y = dibujar_franja(capa, r, M + 74, y, r.lineas(ancho - 74), BRASA) + 22
+        for linea in aa.partir(c["autor"], fa, ancho - 74):
+            espaciado(d, M + 74, y + 8, linea.upper(), dn.sans(19, 650, 100), PAPEL + (215,), 0.08)
+            y += 30
+    if lam.get("pregunta"):
+        y += 52
+        h = parrafo_serif(Image.new("RGBA", (W, H)), M + 30, 0, lam["pregunta"], 56, ancho - 30, PAPEL)
+        d.rectangle([M, y + 8, M + 5, y + h - 4], fill=BRASA)
+        y = parrafo_serif(capa, M + 30, y, lam["pregunta"], 56, ancho - 30, PAPEL)
+    arriba, abajo = T + 140, H - B - 24
+    pos = lam.get("posicion", "abajo")
+    y0 = arriba if pos == "arriba" else (arriba + (abajo - arriba - y) * 0.5 if pos == "centro" else abajo - y)
+    if pos == "arriba":
+        img.alpha_composite(dn.degradado_superior(W, H, hasta=min(0.95, (y0 + y + 160) / H), fuerza=0.8))
+    else:
+        aa.degradado_bajo(img, max(0.08, (y0 - 220) / H), 0.9)
+    cabecera(img, lam.get("meta", cfg["meta"]))
+    img.alpha_composite(capa.crop((0, -round(y0), W, H - round(y0))))
+    if y0 < arriba - 10:
+        print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto")
+    pie(img, aa.credito(lam), PAPEL + (190,))
+    return img
+
+
+def l_cta(cfg, lam, n):
+    """Cierre: la pregunta para comentar, en serif sobre eucalipto hondo, con el signo en cursiva brasa.
+    Con "foto", el fondo es esa foto con película bajo un velo eucalipto hondo (29 oct 2026)."""
+    W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
+    if lam.get("foto"):
+        img = foto_fondo(cfg, lam, n)
+        img.alpha_composite(Image.new("RGBA", (W, H), EUCALIPTO_HONDO + (round(255 * lam.get("oscuro", 0.72)),)))
+    else:
+        img = aa.campo(EUCALIPTO_HONDO, 40 + n, 0.04)
     cabecera(img, (lam.get("rotulo") or "Conversemos").upper(), "oscuro")
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R
@@ -516,7 +651,7 @@ def l_cta(cfg, lam, n):
     if texto_:
         aa.texto(img, M, y + 26, texto_, 38, ancho, PAPEL + (225,))
     fa = dn.sans(24, 650, 100)
-    aa.hoja(img, M + 11, y_pie + 22, 11, BRASA)
+    aro(img, M + 11, y_pie + 22, 24, PAPEL)
     x = M + 32
     for k, palabra in enumerate(["COMENTA", "GUARDA", "COMPARTE"]):
         if k:
@@ -531,7 +666,8 @@ def l_cta(cfg, lam, n):
 
 
 ESTILOS = {"portada": l_portada, "foto": l_foto, "ficha": l_ficha, "serie": l_serie, "citas": l_citas,
-           "pais": l_lugar, "lugar": l_lugar, "paises": l_paises, "dos": l_dos, "cta": l_cta}
+           "pais": l_lugar, "lugar": l_lugar, "paises": l_paises, "dos": l_dos, "cta": l_cta,
+           "reflexion": l_reflexion}
 
 
 def estilo_de(lam):

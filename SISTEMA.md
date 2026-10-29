@@ -26,7 +26,14 @@ Lo aprobó Martín con el carrusel "Protestas en el mundo". Referentes: Mutante 
 - **Franja del acento:** se pintan todas las franjas antes que el texto, para que las letras que bajan (g, j, p, q, y) de la línea de arriba no queden cortadas. La puntuación pegada al acento (¿ ? , :) entra en la franja.
 - **Texturas:** solo de impresión y evidentes. Tipo de madera (v3, 19 oct 2026): borde nítido y mordido, veta horizontal larga, huecos de canto nítido y poros sueltos; la segunda pasada, corrida y en otra tinta, solo asoma por fuera de la letra. Moteado amplio en los campos planos. Nunca grano sobre las fotos ni en el texto corrido.
 
-## Línea Termómetro, antes Nuevos Mundos Posibles (v2, 22 oct 2026)
+## Línea Termómetro, antes Nuevos Mundos Posibles (v2, 22 oct 2026; v3 fotográfica, 29 oct 2026)
+
+**v3 (29 oct 2026, manda sobre lo que sigue):** Martín pidió un diseño más artístico, con fuerte componente de fotografía y no de infografía empresarial.
+- **Foto de fondo en todas las láminas**, con **película** (`pelicula()` en `nuevos_mundos.py`: negros levantados, sombras cálidas, halo en las luces y grano fino de película, nunca ruido digital; va antes del texto, que queda nítido). `"pelicula": false` en el JSON la apaga.
+- **Lámina `reflexion`** (la de uso normal): foto a sangre con un velo (`"oscuro"`, 0.42 por defecto), `rotulo`, `titulo` en pregunta con *acento*, `texto` en prosa (párrafos separados por una línea en blanco), `citas` opcionales y `pregunta` de remate en serif cursiva. `"posicion"`: `abajo` (defecto), `centro` o `arriba`. Nada de listas: las láminas `ficha`, `lugar` y `serie` quedan para cuando un dato de verdad lo pida.
+- **La `cta` con `"foto"`** va sobre esa foto bajo un velo eucalipto hondo.
+- **El símbolo es el aro de Dial** (marca v4) en la estación de Termómetro (punto brasa a 90°), en la cabecera, los antetítulos y el cierre. La hoja ya no se usa.
+- **Más aire entre titular y texto** (40 px en portada y reflexión, 34 en fotos).
 
 Desde el 23 oct 2026 es la línea de clima y ambiente de Al Aire (denuncias, crisis climática, soluciones y ciencia) y se llama **Termómetro**. La clave interna sigue siendo `"seccion": "nuevos-mundos"`.
 
