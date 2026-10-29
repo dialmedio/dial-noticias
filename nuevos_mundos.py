@@ -47,25 +47,90 @@ def cursiva(tam):
     return dn.fuente("InstrumentSerif-Italic.ttf", tam)
 
 
-def cuerpo(tam, italica=False):
-    """Fraunces (OFL, Undercase Type), la letra del cuerpo desde el 29 oct 2026: Martín pidió una tipografía
-    más alternativa, análoga y artística para el texto corrido. Serif blanda (eje SOFT al máximo) y de
-    tamaño óptico de texto, que se siente impresa y no de pantalla."""
-    f = ImageFont.truetype(str(dn.FUENTES / ("Fraunces-Italic-VF.ttf" if italica else "Fraunces-VF.ttf")), int(round(tam)))
-    f.set_variation_by_axes([max(9, min(144, tam * 0.42)), 400, 100, 0])
+# Letras del cuerpo (29 oct 2026: Martín pidió algo más alternativo, análogo, "aesthetic" e indie).
+# "cuerpo" en el JSON elige; todas son OFL y están en fuentes/. r = regular, b = negrilla, i = cursiva.
+CUERPOS = {
+    "fraunces": {"r": "Fraunces-VF.ttf", "b": "Fraunces-VF.ttf", "i": "Fraunces-Italic-VF.ttf", "peso": 400, "negrita": 720,
+                 "ejes": lambda tam, peso: {b"Optical Size": max(9, min(144, tam * 0.42)), b"Weight": peso, b"Softness": 100, b"Wonky": 0},
+                 "escala": 1.0},
+    "cormorant": {"r": "CormorantGaramond-VF.ttf", "b": "CormorantGaramond-VF.ttf", "i": "CormorantGaramond-Italic-VF.ttf",
+                  "peso": 560, "negrita": 700, "ejes": lambda tam, peso: {b"Weight": peso}, "escala": 1.2},
+    "bricolage": {"r": "BricolageGrotesque-VF.ttf", "b": "BricolageGrotesque-VF.ttf", "i": "BricolageGrotesque-VF.ttf",
+                  "peso": 360, "negrita": 680, "escala": 0.96,
+                  "ejes": lambda tam, peso: {b"Optical size": max(12, min(96, tam * 0.4)), b"Weight": peso, b"Width": 92}},
+    "spectral": {"r": "Spectral-Light.ttf", "b": "Spectral-SemiBold.ttf", "i": "Spectral-LightItalic.ttf", "escala": 1.0},
+}
+CUERPO = "fraunces"  # lo fija lamina() con cfg["cuerpo"]
+
+
+def cuerpo(tam, estilo="r"):
+    """La letra del texto corrido, según CUERPO. estilo: "r", "b" (negrilla) o "i" (cursiva)."""
+    c = CUERPOS[CUERPO]
+    tam = tam * c.get("escala", 1.0)
+    f = ImageFont.truetype(str(dn.FUENTES / c[estilo]), int(round(tam)))
+    if c.get("ejes"):
+        ejes = c["ejes"](tam, c["negrita"] if estilo == "b" else c["peso"])
+        f.set_variation_by_axes([ejes.get(a["name"], a["default"]) for a in f.get_variation_axes()])
     return f
 
 
-def texto(img, x, y, contenido, tam, ancho, color, inter=1.38):
-    """Texto corrido en Fraunces; *así* va en cursiva del mismo color. Devuelve la y final."""
+def _ancho_linea(r, l):
+    return sum(r._w(tok) for tok in l) + sum(r._esp(tok[0][1]) for tok in l[1:])
+
+
+def texto(img, x, y, contenido, tam, ancho, color, inter=1.42, centrar=False):
+    """Texto corrido. *así* resalta en negrilla con textura de tinta (29 oct 2026: "si quieres resaltar
+    un texto dentro del cuerpo, ponle negrilla y textura"). centrar: cada línea centrada en el ancho."""
     r = dn.Rico(contenido, tam, color=color, acento=color, interlineado=inter)
-    r.f, r.fa = cuerpo(tam), cuerpo(tam, True)
-    return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
+    r.f, r.fa = cuerpo(tam), cuerpo(tam, "b")
+    d = ImageDraw.Draw(img)
+    asc = r.f.getmetrics()[0]
+    marcas = []
+    for l in r.equilibradas(ancho):
+        cx = x + ((ancho - _ancho_linea(r, l)) / 2 if centrar else 0)
+        base = y + asc
+        for i, tok in enumerate(l):
+            if i:
+                cx += r._esp(tok[0][1])
+            for w, ac in tok:
+                f = r.fa if ac else r.f
+                if ac:
+                    marcas.append((cx, base, w))
+                else:
+                    d.text((cx, base), w, font=f, fill=color, anchor="ls")
+                cx += f.getlength(w)
+        y += r.alto_linea
+    if marcas:
+        negrilla_textura(img, marcas, r.fa, color)
+    return y
 
 
-def alto_cuerpo(contenido, tam, ancho, inter=1.38):
+def negrilla_textura(img, marcas, f, color):
+    """Negrilla con textura de tinta: la letra no carga pareja y deja poros, como impresa con tipos."""
+    asc, desc = f.getmetrics()
+    x0 = int(min(m[0] for m in marcas)) - 4
+    x1 = int(max(m[0] + f.getlength(m[2]) for m in marcas)) + 4
+    y0 = int(min(m[1] for m in marcas) - asc) - 4
+    y1 = int(max(m[1] for m in marcas) + desc) + 4
+    w, h = x1 - x0, y1 - y0
+    m = Image.new("L", (w, h), 0)
+    dm = ImageDraw.Draw(m)
+    for cx, base, palabra in marcas:
+        dm.text((cx - x0, base - y0), palabra, font=f, fill=255, anchor="ls")
+    a = np.asarray(m, np.float32) / 255
+    rng = np.random.default_rng(abs(x0 * 7 + y0) % 9973)
+    poros = (rng.random((h, w)) > 0.07).astype(np.float32)
+    carga = np.clip(0.9 + 0.1 * aa.ruido_suave(w, h, abs(x0 + y0) % 997, 5, 5, 1.0), 0.7, 1)
+    a = a * np.clip(0.6 + 0.4 * poros, 0, 1) * carga
+    alfa = 255  # la negrilla va a tinta plena: tiene que resaltar sobre el resto del texto
+    capa = Image.new("RGBA", (w, h), tuple(color[:3]) + (0,))
+    capa.putalpha(Image.fromarray((np.clip(a, 0, 1) * alfa).astype(np.uint8)))
+    img.alpha_composite(capa, (x0, y0))
+
+
+def alto_cuerpo(contenido, tam, ancho, inter=1.42):
     r = dn.Rico(contenido, tam, interlineado=inter)
-    r.f, r.fa = cuerpo(tam), cuerpo(tam, True)
+    r.f, r.fa = cuerpo(tam), cuerpo(tam, "b")
     return r.alto(r.equilibradas(ancho))
 
 
@@ -75,7 +140,7 @@ def rico_serif(contenido, tam, color, inter=1.0):
     return r
 
 
-def dibujar_franja(img, r, x, y, lineas, franja):
+def dibujar_franja(img, r, x, y, lineas, franja, centrar=None):
     """Como Rico.dibujar, pero el acento (*así*) va en cursiva carbón sobre una franja (22 oct 2026:
     la cursiva naranja sola no siempre se leía). Primero se pintan todas las franjas y después todo
     el texto, para que las letras que bajan de la línea de arriba no queden tapadas."""
@@ -85,7 +150,7 @@ def dibujar_franja(img, r, x, y, lineas, franja):
     posiciones = []  # (x, base, palabra, acento)
     yy = y
     for l in lineas:
-        cx, base = x, yy + asc
+        cx, base = x + ((centrar - _ancho_linea(r, l)) / 2 if centrar else 0), yy + asc
         for i, tok in enumerate(l):
             if i:
                 cx += r._esp(tok[0][1])
@@ -171,11 +236,11 @@ def alto_titular(contenido, tam, ancho, inter=1.0):
     return r.alto(r.equilibradas(ancho))
 
 
-def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja="tiza", inter=1.0):
+def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja="tiza", inter=1.0, centrar=False):
     """Titular en serif. Sobre fotos el acento va en cursiva con una raya de tiza debajo (29 oct 2026);
     sobre papel, en una franja (salvia)."""
     r = rico_serif(contenido, tam, color, inter)
-    return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja)
+    return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja, ancho if centrar else None)
 
 
 def espaciado(d, x, y, texto, f, fill, tracking=0.14, sombra=False):
@@ -672,11 +737,15 @@ def l_reflexion(cfg, lam, n):
     lean como reflexión y no como lista; más aire entre el titular y el texto.
     rotulo, titulo (la pregunta, con *acento*), texto (párrafos separados por una línea en blanco),
     citas [{texto, autor}], pregunta (remate en serif cursiva con filete brasa).
-    "posicion": "arriba", "centro" o "abajo" (por defecto); "oscuro" (0 a 1, 0.42 por defecto) apaga la foto."""
+    "posicion": "arriba", "centro" o "abajo" (por defecto); "oscuro" (0 a 1, 0.52 por defecto) apaga la foto.
+    2.ª ronda (29 oct 2026): sin cabecera (solo la llevan la primera y la última lámina; "cabecera": true
+    la pone), "alinear": "centro" centra titular y texto, y la foto va más oscura para que el texto resalte."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
     img = foto_fondo(cfg, lam, n)
-    img.alpha_composite(Image.new("RGBA", (W, H), CARBON + (round(255 * lam.get("oscuro", 0.42)),)))
-    ancho = W - 2 * M - R
+    img.alpha_composite(Image.new("RGBA", (W, H), CARBON + (round(255 * lam.get("oscuro", 0.52)),)))
+    centrar = lam.get("alinear") == "centro"
+    ancho = W - 2 * M - R if not centrar else W - 2 * M - 40
+    x = M if not centrar else (W - ancho) / 2
     capa = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
     d = ImageDraw.Draw(capa)
     y = 0
@@ -684,9 +753,9 @@ def l_reflexion(cfg, lam, n):
         antetitulo(capa, M, y + 24, lam["rotulo"], PAPEL, BRASA, sombra=True)
         y += 64
     if lam.get("titulo"):
-        y = titular(capa, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho) + 44
+        y = titular(capa, x, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho, centrar=centrar) + 48
     for k, par in enumerate(p for p in lam.get("texto", "").split("\n\n") if p.strip()):
-        y = texto(capa, M, y + (26 if k else 0), par.strip(), 41, ancho, PAPEL + (244,))
+        y = texto(capa, x, y + (28 if k else 0), par.strip(), 41, ancho, PAPEL + (246,), centrar=centrar)
     fa = dn.sans(23, 600, 96)
     for k, c in enumerate(lam.get("citas", [])):
         y += 46 if (k or lam.get("texto")) else 0
@@ -701,14 +770,23 @@ def l_reflexion(cfg, lam, n):
         h = parrafo_serif(Image.new("RGBA", (W, H)), M + 30, 0, lam["pregunta"], 56, ancho - 30, PAPEL)
         d.rectangle([M, y + 8, M + 5, y + h - 4], fill=BRASA)
         y = parrafo_serif(capa, M + 30, y, lam["pregunta"], 56, ancho - 30, PAPEL)
-    arriba, abajo = T + 140, H - B - 24
+    con_cabecera = lam.get("cabecera", False)
+    arriba, abajo = (T + 140 if con_cabecera else T + 30), H - B - 24
     pos = lam.get("posicion", "abajo")
     y0 = arriba if pos == "arriba" else (arriba + (abajo - arriba - y) * 0.5 if pos == "centro" else abajo - y)
     if pos == "arriba":
-        img.alpha_composite(dn.degradado_superior(W, H, hasta=min(0.95, (y0 + y + 160) / H), fuerza=0.8))
+        img.alpha_composite(dn.degradado_superior(W, H, hasta=min(0.95, (y0 + y + 180) / H), fuerza=0.85))
+    elif pos == "centro":  # un velo más hondo detrás del bloque, que se apaga hacia arriba y hacia abajo
+        yy = np.linspace(0, 1, H)[:, None]
+        c0, c1 = (y0 - 140) / H, (y0 + y + 140) / H
+        t = np.clip(np.minimum((yy - c0) / 0.12, (c1 - yy) / 0.12), 0, 1)
+        velo = Image.new("RGBA", (W, H), CARBON + (0,))
+        velo.putalpha(Image.fromarray(np.repeat((t * 0.45 * 255).astype(np.uint8), W, 1)))
+        img.alpha_composite(velo)
     else:
-        aa.degradado_bajo(img, max(0.08, (y0 - 220) / H), 0.9)
-    cabecera(img, lam.get("meta", cfg["meta"]))
+        aa.degradado_bajo(img, max(0.08, (y0 - 240) / H), 0.93)
+    if con_cabecera:
+        cabecera(img, lam.get("meta", cfg["meta"]))
     img.alpha_composite(capa.crop((0, -round(y0), W, H - round(y0))))
     if y0 < arriba - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto")
@@ -726,6 +804,8 @@ def l_cta(cfg, lam, n):
         img.alpha_composite(Image.new("RGBA", (W, H), EUCALIPTO_HONDO + (round(255 * lam.get("oscuro", 0.72)),)))
         if arriba:
             img.alpha_composite(dn.degradado_superior(W, H, hasta=0.5, fuerza=0.75))
+        else:  # el bloque de la pregunta va sobre una zona más honda, para que no se pierda
+            aa.degradado_bajo(img, 0.38, 0.9)
         aa.degradado_bajo(img, 0.72, 0.85)
     else:
         img = aa.campo(EUCALIPTO_HONDO, 40 + n, 0.04)
@@ -779,6 +859,8 @@ def estilo_de(lam):
 
 
 def lamina(cfg, lam, n):
+    global CUERPO
+    CUERPO = cfg.get("cuerpo", "fraunces")
     estilo = estilo_de(lam)
     if estilo == "analisis":  # en esta línea, el análisis es una ficha (papel, sin carbón)
         estilo = "ficha"
