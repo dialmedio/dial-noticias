@@ -449,7 +449,7 @@ def l_portada(cfg, lam, n):
     tam = 116 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
     alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (44 + alto_cuerpo(baj, 40, ancho - 40) if baj else 0)
-    if lam.get("posicion", "arriba") == "arriba":  # 29 oct 2026: el texto va arriba o centrado, nunca abajo
+    if lam.get("posicion") == "arriba":  # la portada va abajo; el resto, arriba o centrado (Martín, 29 oct 2026)
         y = g("T") + 200
         if lam.get("oscuro"):
             img.alpha_composite(Image.new("RGBA", (W, H), CARBON + (round(255 * lam["oscuro"]),)))
