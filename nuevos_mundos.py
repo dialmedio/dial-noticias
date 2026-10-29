@@ -60,6 +60,7 @@ CUERPOS = {
                   "ejes": lambda tam, peso: {b"Optical size": max(12, min(96, tam * 0.4)), b"Weight": peso, b"Width": 92}},
     "spectral": {"r": "Spectral-Light.ttf", "b": "Spectral-SemiBold.ttf", "i": "Spectral-LightItalic.ttf", "escala": 1.0},
 }
+FRANJA_CUERPO = (46, 44, 41)  # negro grisáceo de la franja de los resaltados del cuerpo
 CUERPO = "bricolage"  # lo fija lamina() con cfg["cuerpo"]; Martín eligió Bricolage el 29 oct 2026
 
 
@@ -84,22 +85,32 @@ def texto(img, x, y, contenido, tam, ancho, color, inter=1.42, centrar=False):
     r = dn.Rico(contenido, tam, color=color, acento=color, interlineado=inter)
     r.f, r.fa = cuerpo(tam), cuerpo(tam, "b")
     d = ImageDraw.Draw(img)
-    asc = r.f.getmetrics()[0]
-    marcas = []
+    asc, desc = r.f.getmetrics()
+    marcas, normales, rects = [], [], []
     for l in r.equilibradas(ancho):
         cx = x + ((ancho - _ancho_linea(r, l)) / 2 if centrar else 0)
         base = y + asc
+        tramo = None  # una franja por cada tramo resaltado de la línea
         for i, tok in enumerate(l):
             if i:
                 cx += r._esp(tok[0][1])
             for w, ac in tok:
                 f = r.fa if ac else r.f
+                (marcas if ac else normales).append((cx, base, w))
                 if ac:
-                    marcas.append((cx, base, w))
-                else:
-                    d.text((cx, base), w, font=f, fill=color, anchor="ls")
+                    tramo = [tramo[0] if tramo else cx, cx + f.getlength(w), base]
+                elif tramo:
+                    rects.append(tramo)
+                    tramo = None
                 cx += f.getlength(w)
+        if tramo:
+            rects.append(tramo)
         y += r.alto_linea
+    if rects:  # 29 oct 2026: lo resaltado va sobre una franja negra grisácea con textura, como tinta impresa
+        franja_impresa(img, [[a - tam * 0.18, b - asc * 0.86, c + tam * 0.18, b + desc * 0.55] for a, c, b in rects],
+                       FRANJA_CUERPO, int(sum(r_[0] for r_ in rects)) % 997)
+    for cx, base, w in normales:
+        d.text((cx, base), w, font=r.f, fill=color, anchor="ls")
     if marcas:
         negrilla_textura(img, marcas, r.fa, color)
     return y
@@ -315,8 +326,10 @@ def cabecera(img, meta, fondo="foto"):
 
 
 def pie(img, contenido, color, n=None, cfg=None):
-    """Crédito abajo, más pequeño desde el 29 oct 2026, y a la derecha el número de la lámina
-    ("02 / 06"): el carrusel es un solo texto que sigue de una lámina a la otra."""
+    """Desde el 29 oct 2026 (Martín, estructural) las láminas no llevan créditos ni número de lámina:
+    los créditos van en la descripción, como siempre. "pie": true en el JSON los vuelve a poner."""
+    if not (cfg and cfg.get("pie")):
+        return
     W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
     d = ImageDraw.Draw(img)
     d.text((M, H - B + 58), contenido.upper(), font=dn.mono(15), fill=color, anchor="ls")
@@ -436,10 +449,15 @@ def l_portada(cfg, lam, n):
     tam = 116 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
     alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (44 + alto_cuerpo(baj, 40, ancho - 40) if baj else 0)
-    y = H - B - alto
-    # el degradado arranca un poco antes del texto, por alto que sea el bloque (cielos claros)
-    img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 480) / H), fuerza=0.85))  # velo largo
-    aa.degradado_bajo(img, max(0.12, (y - 150) / H), 0.97)
+    if lam.get("posicion", "arriba") == "arriba":  # 29 oct 2026: el texto va arriba o centrado, nunca abajo
+        y = g("T") + 200
+        if lam.get("oscuro"):
+            img.alpha_composite(Image.new("RGBA", (W, H), CARBON + (round(255 * lam["oscuro"]),)))
+        img.alpha_composite(dn.degradado_superior(W, H, hasta=min(0.95, (y + alto + 260) / H), fuerza=0.95))
+    else:
+        y = H - B - alto
+        img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 480) / H), fuerza=0.85))  # velo largo
+        aa.degradado_bajo(img, max(0.12, (y - 150) / H), 0.97)
     cabecera(img, lam.get("meta", cfg["meta"]))
     if lam.get("rotulo"):
         antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA, sombra=True)
@@ -772,8 +790,8 @@ def l_reflexion(cfg, lam, n):
         y = parrafo_serif(capa, M + 30, y, lam["pregunta"], 56, ancho - 30, PAPEL)
     con_cabecera = lam.get("cabecera", False)
     arriba, abajo = (T + 140 if con_cabecera else T + 30), H - B - 24
-    pos = lam.get("posicion", "abajo")
-    y0 = arriba if pos == "arriba" else (arriba + (abajo - arriba - y) * 0.5 if pos == "centro" else abajo - y)
+    pos = "arriba" if lam.get("posicion") == "arriba" else "centro"  # 29 oct 2026: arriba o centrado, nunca abajo
+    y0 = arriba if pos == "arriba" else arriba + (abajo - arriba - y) * 0.5
     if pos == "arriba":
         img.alpha_composite(dn.degradado_superior(W, H, hasta=min(0.95, (y0 + y + 180) / H), fuerza=0.85))
     elif pos == "centro":  # un velo más hondo detrás del bloque, que se apaga hacia arriba y hacia abajo
@@ -798,7 +816,7 @@ def l_cta(cfg, lam, n):
     """Cierre: la pregunta para comentar, en serif sobre eucalipto hondo, con el signo en cursiva brasa.
     Con "foto", el fondo es esa foto con película bajo un velo eucalipto hondo (29 oct 2026)."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
-    arriba = lam.get("posicion") == "arriba"  # con una cara en el centro, la pregunta sube y la cara queda libre
+    arriba = lam.get("posicion", "arriba") == "arriba"  # 29 oct 2026: la pregunta va arriba por defecto
     if lam.get("foto"):
         img = foto_fondo(cfg, lam, n)
         img.alpha_composite(Image.new("RGBA", (W, H), EUCALIPTO_HONDO + (round(255 * lam.get("oscuro", 0.72)),)))
