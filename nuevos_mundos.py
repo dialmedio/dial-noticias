@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dial_noticias as dn  # noqa: E402
@@ -45,6 +45,28 @@ def serif(tam):
 
 def cursiva(tam):
     return dn.fuente("InstrumentSerif-Italic.ttf", tam)
+
+
+def cuerpo(tam, italica=False):
+    """Fraunces (OFL, Undercase Type), la letra del cuerpo desde el 29 oct 2026: Martín pidió una tipografía
+    más alternativa, análoga y artística para el texto corrido. Serif blanda (eje SOFT al máximo) y de
+    tamaño óptico de texto, que se siente impresa y no de pantalla."""
+    f = ImageFont.truetype(str(dn.FUENTES / ("Fraunces-Italic-VF.ttf" if italica else "Fraunces-VF.ttf")), int(round(tam)))
+    f.set_variation_by_axes([max(9, min(144, tam * 0.42)), 400, 100, 0])
+    return f
+
+
+def texto(img, x, y, contenido, tam, ancho, color, inter=1.38):
+    """Texto corrido en Fraunces; *así* va en cursiva del mismo color. Devuelve la y final."""
+    r = dn.Rico(contenido, tam, color=color, acento=color, interlineado=inter)
+    r.f, r.fa = cuerpo(tam), cuerpo(tam, True)
+    return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
+
+
+def alto_cuerpo(contenido, tam, ancho, inter=1.38):
+    r = dn.Rico(contenido, tam, interlineado=inter)
+    r.f, r.fa = cuerpo(tam), cuerpo(tam, True)
+    return r.alto(r.equilibradas(ancho))
 
 
 def rico_serif(contenido, tam, color, inter=1.0):
@@ -80,11 +102,45 @@ def dibujar_franja(img, r, x, y, lineas, franja):
             if tramo:
                 rects.append([tramo[0] - tam * 0.08, tramo[2] - tam * 0.72, tramo[1] + tam * 0.1, tramo[2] + tam * 0.2])
             tramo = [cx, cx + ancho, base] if ac else None
+    semilla = sum(map(ord, "".join(p[2] for p in posiciones))) % 997
+    if franja == "tiza":  # 29 oct 2026: el acento en cursiva del mismo color, con una raya de tiza debajo
+        for cx, base, w, ac, _ in posiciones:
+            d.text((cx, base), w, font=r.fa if ac else r.f, fill=r.color, anchor="ls")
+        for k, rc in enumerate(rects):
+            tiza(img, rc[0] + tam * 0.04, rc[2] - tam * 0.02, rc[3] - tam * 0.03, max(7, tam * 0.11), semilla + k)
+        return yy
     if rects:
-        franja_impresa(img, rects, franja, sum(map(ord, "".join(p[2] for p in posiciones))) % 997)
+        franja_impresa(img, rects, franja, semilla)
     for cx, base, w, ac, _ in posiciones:
         d.text((cx, base), w, font=r.fa if ac else r.f, fill=CARBON if ac else r.color, anchor="ls")
     return yy
+
+
+def tiza(img, x0, x1, y, grosor, semilla, color=PAPEL):
+    """Una raya de tiza blanca bajo el acento (Martín, 29 oct 2026, en lugar de la franja): trazo a mano,
+    apenas curvo y en leve diagonal, más delgado en las puntas, con poros por donde se ve el fondo y
+    vetas a lo largo, como la tiza que arrastra sobre un tablero."""
+    rng = np.random.default_rng(semilla)
+    pad = int(grosor * 3)
+    w, h = int(x1 - x0) + 2 * pad, int(grosor * 7)
+    s = 3
+    m = Image.new("L", (w * s, h * s), 0)
+    dm = ImageDraw.Draw(m)
+    n = 48
+    xs = np.linspace(pad, w - pad, n)
+    curva = (h / 2 + np.sin(np.linspace(0, np.pi, n)) * grosor * 0.5 * rng.choice([-1, 1])
+             + np.linspace(1, -1, n) * grosor * rng.uniform(0.2, 0.7) + np.cumsum(rng.normal(0, grosor * 0.03, n)))
+    for i in range(n - 1):
+        t = i / (n - 1)
+        gi = grosor * (0.45 + 0.55 * np.sin(np.pi * min(1, 0.08 + t * 0.9)))
+        dm.line([(xs[i] * s, curva[i] * s), (xs[i + 1] * s, curva[i + 1] * s)], fill=255, width=max(1, int(gi * s)))
+    a = np.asarray(m.resize((w, h), Image.LANCZOS), np.float32) / 255
+    poros = (rng.random((h, w)) > 0.3).astype(np.float32)
+    vetas = np.asarray(Image.fromarray((rng.random((h, max(2, w // 7))) * 255).astype(np.uint8)).resize((w, h), Image.BILINEAR), np.float32) / 255
+    a = a * np.clip(0.35 + 0.65 * poros, 0, 1) * (0.55 + 0.45 * vetas)
+    capa = Image.new("RGBA", (w, h), tuple(color[:3]) + (0,))
+    capa.putalpha(Image.fromarray((np.clip(a, 0, 1) * 240).astype(np.uint8)))
+    img.alpha_composite(capa, (max(0, int(x0 - pad)), max(0, int(y - h / 2))))
 
 
 def franja_impresa(img, rects, color, semilla):
@@ -115,8 +171,9 @@ def alto_titular(contenido, tam, ancho, inter=1.0):
     return r.alto(r.equilibradas(ancho))
 
 
-def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja=BRASA, inter=1.0):
-    """Titular en serif con el acento sobre franja: brasa sobre fotos y verdes, salvia sobre papel."""
+def titular(img, x, y, contenido, tam, ancho, color=PAPEL, franja="tiza", inter=1.0):
+    """Titular en serif. Sobre fotos el acento va en cursiva con una raya de tiza debajo (29 oct 2026);
+    sobre papel, en una franja (salvia)."""
     r = rico_serif(contenido, tam, color, inter)
     return dibujar_franja(img, r, x, y, r.equilibradas(ancho), franja)
 
@@ -192,8 +249,15 @@ def cabecera(img, meta, fondo="foto"):
     espaciado(d, M, T + 88, meta.upper(), dn.sans(19, 600, 100), tinta + (235,), sombra=fondo == "foto")
 
 
-def pie(img, contenido, color):
-    aa.pie(img, contenido.upper(), color)
+def pie(img, contenido, color, n=None, cfg=None):
+    """Crédito abajo, más pequeño desde el 29 oct 2026, y a la derecha el número de la lámina
+    ("02 / 06"): el carrusel es un solo texto que sigue de una lámina a la otra."""
+    W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
+    d = ImageDraw.Draw(img)
+    d.text((M, H - B + 58), contenido.upper(), font=dn.mono(15), fill=color, anchor="ls")
+    total = len(cfg.get("laminas", [])) if cfg else 0
+    if n and total:
+        d.text((W - M - R, H - B + 58), f"{n:02d} / {total:02d}", font=dn.mono(17, True), fill=color, anchor="rs")
 
 
 # ------------------------------------------------------------ riso de dos tintas
@@ -246,13 +310,37 @@ def pelicula(img, semilla, cfg=None, fuerza=1.0):
     a = 0.04 + a * 0.92  # negros levantados y luces que no queman, como en el papel
     a = a + ((1 - lum) ** 2)[..., None] * np.array([0.02, 0.008, -0.014], np.float32) * fuerza
     rng = np.random.default_rng(semilla)
-    gw, gh = max(2, round(w / 1.6)), max(2, round(h / 1.6))
+    # grano fino (29 oct 2026, 2.ª ronda: el primero se veía grueso): casi del tamaño del píxel y más leve
+    gw, gh = max(2, round(w / 1.12)), max(2, round(h / 1.12))
     grano = np.asarray(Image.fromarray(rng.normal(0, 1, (gh, gw)).astype(np.float32), "F").resize((w, h), Image.BICUBIC))
     color = np.stack([np.asarray(Image.fromarray(rng.normal(0, 1, (gh // 2, gw // 2)).astype(np.float32), "F")
                                  .resize((w, h), Image.BICUBIC)) for _ in range(3)], -1)
-    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.042 * fuerza
-    a = a + grano[..., None] * peso[..., None] + color * 0.006 * fuerza
+    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.026 * fuerza
+    a = a + grano[..., None] * peso[..., None] + color * 0.004 * fuerza
+    # fuga de luz: un resplandor cálido que entra por un borde, distinto en cada lámina (pantalla)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    borde = rng.integers(4)
+    dist = [xx / w, 1 - xx / w, yy / h, 1 - yy / h][borde]
+    centro = rng.uniform(0.15, 0.85)
+    eje = [yy / h, yy / h, xx / w, xx / w][borde]
+    fuga = np.exp(-(dist / 0.16) ** 2) * np.exp(-((eje - centro) / 0.35) ** 2) * rng.uniform(0.10, 0.2) * fuerza
+    tono = np.array([1.0, 0.48, 0.2], np.float32)
+    a = 1 - (1 - a) * (1 - fuga[..., None] * tono)
+    # viñeta suave, como la de un lente viejo
+    r = np.sqrt(((xx / w - 0.5) / 0.5) ** 2 + ((yy / h - 0.5) / 0.5) ** 2) / np.sqrt(2)
+    a = a * (1 - 0.18 * np.clip(r - 0.45, 0, 1) ** 1.4 / 0.55 ** 1.4)[..., None]
     out = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
+    # polvo y algún pelo en el negativo: pocos y pequeños, claros (en la copia, el polvo sale blanco)
+    polvo = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    dp = ImageDraw.Draw(polvo)
+    for _ in range(int(rng.integers(14, 26))):
+        px, py, rr = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(0.6, 2.2)
+        dp.ellipse([px - rr, py - rr * rng.uniform(0.6, 1.4), px + rr, py + rr], fill=(250, 246, 236, int(rng.integers(60, 140))))
+    for _ in range(int(rng.integers(0, 3))):
+        x0, y0 = rng.uniform(0, w), rng.uniform(0, h)
+        puntos = [(x0 + k * rng.uniform(4, 9), y0 + np.sin(k / 3 + rng.uniform(0, 3)) * 6 + k * rng.uniform(-3, 3)) for k in range(int(rng.integers(6, 14)))]
+        dp.line(puntos, fill=(250, 246, 236, 70), width=1)
+    out.alpha_composite(polvo.filter(ImageFilter.GaussianBlur(0.5)))
     if img.mode == "RGBA":
         out.putalpha(img.getchannel("A"))
     return out
@@ -282,7 +370,7 @@ def l_portada(cfg, lam, n):
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tam = 116 * lam.get("escala", 1.0)
     baj = lam.get("bajada", "")
-    alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (40 + aa.alto_texto(baj, 38, ancho - 40) if baj else 0)
+    alto = alto_titular(lam["titulo"], tam, ancho, 0.98) + (44 + alto_cuerpo(baj, 40, ancho - 40) if baj else 0)
     y = H - B - alto
     # el degradado arranca un poco antes del texto, por alto que sea el bloque (cielos claros)
     img.alpha_composite(dn.degradado_inferior(W, H, desde=max(0.05, (y - 480) / H), fuerza=0.85))  # velo largo
@@ -292,8 +380,8 @@ def l_portada(cfg, lam, n):
         antetitulo(img, M, y - 30, lam["rotulo"], PAPEL, BRASA, sombra=True)
     y = titular(img, M, y, lam["titulo"], tam, ancho, inter=0.98)
     if baj:  # 29 oct 2026: más aire entre el titular y el texto
-        aa.texto(img, M, y + 40, baj, 38, ancho - 40, PAPEL + (235,))
-    pie(img, aa.credito(lam), PAPEL + (190,))
+        texto(img, M, y + 44, baj, 40, ancho - 40, PAPEL + (238,))
+    pie(img, aa.credito(lam), PAPEL + (190,), n, cfg)
     return img
 
 
@@ -305,7 +393,7 @@ def l_foto(cfg, lam, n):
         img.alpha_composite(dn.degradado_superior(W, H, hasta=0.58, fuerza=0.86))
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tx, tt = lam.get("texto", ""), lam.get("titulo", "")
-    alto = (alto_titular(tt, 92, ancho) + 34 if tt else 0) + aa.alto_texto(tx, 40, ancho)
+    alto = (alto_titular(tt, 92, ancho) + 34 if tt else 0) + alto_cuerpo(tx, 40, ancho)
     y = H - B - alto if not arriba else T + 200
     if not arriba:
         aa.degradado_bajo(img, max(0.2, (y - 170) / H), 0.92)
@@ -314,11 +402,11 @@ def l_foto(cfg, lam, n):
         antetitulo(img, M, y - 28, lam["rotulo"], PAPEL, BRASA, sombra=True)
     if tt:
         y = titular(img, M, y, tt, 92, ancho) + 34
-    aa.texto(img, M, y, tx, 40, ancho, PAPEL + (240,))
+    texto(img, M, y, tx, 40, ancho, PAPEL + (240,))
     personas = lam.get("persona") or []
     for p in ([personas] if isinstance(personas, dict) else personas):
         aa.rotulo_persona(img, p)
-    pie(img, aa.credito(lam), PAPEL + (190,))
+    pie(img, aa.credito(lam), PAPEL + (190,), n, cfg)
     return img
 
 
@@ -598,13 +686,13 @@ def l_reflexion(cfg, lam, n):
     if lam.get("titulo"):
         y = titular(capa, M, y, lam["titulo"], 92 * lam.get("escala", 1.0), ancho) + 44
     for k, par in enumerate(p for p in lam.get("texto", "").split("\n\n") if p.strip()):
-        y = aa.texto(capa, M, y + (24 if k else 0), par.strip(), 40, ancho, PAPEL + (242,), inter=1.3)
+        y = texto(capa, M, y + (26 if k else 0), par.strip(), 41, ancho, PAPEL + (244,))
     fa = dn.sans(23, 600, 96)
     for k, c in enumerate(lam.get("citas", [])):
         y += 46 if (k or lam.get("texto")) else 0
         d.text((M - 4, y + 118), "“", font=serif(180), fill=BRASA, anchor="ls")
         r = rico_serif(c["texto"], 56, PAPEL, 1.08)
-        y = dibujar_franja(capa, r, M + 74, y, r.lineas(ancho - 74), BRASA) + 22
+        y = dibujar_franja(capa, r, M + 74, y, r.lineas(ancho - 74), "tiza") + 22
         for linea in aa.partir(c["autor"], fa, ancho - 74):
             espaciado(d, M + 74, y + 8, linea.upper(), dn.sans(19, 650, 100), PAPEL + (215,), 0.08)
             y += 30
@@ -624,7 +712,7 @@ def l_reflexion(cfg, lam, n):
     img.alpha_composite(capa.crop((0, -round(y0), W, H - round(y0))))
     if y0 < arriba - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto")
-    pie(img, aa.credito(lam), PAPEL + (190,))
+    pie(img, aa.credito(lam), PAPEL + (190,), n, cfg)
     return img
 
 
@@ -632,24 +720,29 @@ def l_cta(cfg, lam, n):
     """Cierre: la pregunta para comentar, en serif sobre eucalipto hondo, con el signo en cursiva brasa.
     Con "foto", el fondo es esa foto con película bajo un velo eucalipto hondo (29 oct 2026)."""
     W, H, M, T, B, R = g("W"), g("H"), g("M"), g("T"), g("B"), g("R")
+    arriba = lam.get("posicion") == "arriba"  # con una cara en el centro, la pregunta sube y la cara queda libre
     if lam.get("foto"):
         img = foto_fondo(cfg, lam, n)
         img.alpha_composite(Image.new("RGBA", (W, H), EUCALIPTO_HONDO + (round(255 * lam.get("oscuro", 0.72)),)))
+        if arriba:
+            img.alpha_composite(dn.degradado_superior(W, H, hasta=0.5, fuerza=0.75))
+        aa.degradado_bajo(img, 0.72, 0.85)
     else:
         img = aa.campo(EUCALIPTO_HONDO, 40 + n, 0.04)
     cabecera(img, (lam.get("rotulo") or "Conversemos").upper(), "oscuro")
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R
-    d.text((W - M - R + 10, T + 560), "?", font=cursiva(640), fill=BRASA, anchor="rs")
+    if not lam.get("foto"):  # sobre una foto, el signo grande tapaba la cara
+        d.text((W - M - R + 10, T + 560), "?", font=cursiva(640), fill=BRASA, anchor="rs")
     pregunta, texto_ = lam["pregunta"], lam.get("texto", "")
     tam = 100 * lam.get("escala", 1.0)
-    alto = alto_titular(pregunta, tam, ancho) + (26 + aa.alto_texto(texto_, 38, ancho) if texto_ else 0)
+    alto = alto_titular(pregunta, tam, ancho) + (40 + alto_cuerpo(texto_, 40, ancho) if texto_ else 0)
     y_pie = H - B - 150
-    y = max(T + 320, y_pie - 70 - alto)
+    y = T + 190 if arriba else max(T + 320, y_pie - 70 - alto)
     antetitulo(img, M, y - 30, "Tu opinión", PAPEL, BRASA)
     y = titular(img, M, y, pregunta, tam, ancho)
     if texto_:
-        aa.texto(img, M, y + 26, texto_, 38, ancho, PAPEL + (225,))
+        texto(img, M, y + 40, texto_, 40, ancho, PAPEL + (232,))
     fa = dn.sans(24, 650, 100)
     aro(img, M + 11, y_pie + 22, 24, PAPEL)
     x = M + 32
@@ -662,6 +755,7 @@ def l_cta(cfg, lam, n):
     d = ImageDraw.Draw(img)
     d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.mono(28, True), fill=PAPEL, anchor="rs")
     d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=BRASA, anchor="ls")
+    pie(img, aa.credito(lam) if lam.get("foto") else "", PAPEL + (170,), n, cfg)
     return img
 
 
