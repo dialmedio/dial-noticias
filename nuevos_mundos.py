@@ -60,7 +60,7 @@ CUERPOS = {
                   "ejes": lambda tam, peso: {b"Optical size": max(12, min(96, tam * 0.4)), b"Weight": peso, b"Width": 92}},
     "spectral": {"r": "Spectral-Light.ttf", "b": "Spectral-SemiBold.ttf", "i": "Spectral-LightItalic.ttf", "escala": 1.0},
 }
-CUERPO = "fraunces"  # lo fija lamina() con cfg["cuerpo"]
+CUERPO = "bricolage"  # lo fija lamina() con cfg["cuerpo"]; Martín eligió Bricolage el 29 oct 2026
 
 
 def cuerpo(tam, estilo="r"):
@@ -860,7 +860,7 @@ def estilo_de(lam):
 
 def lamina(cfg, lam, n):
     global CUERPO
-    CUERPO = cfg.get("cuerpo", "fraunces")
+    CUERPO = cfg.get("cuerpo", "bricolage")
     estilo = estilo_de(lam)
     if estilo == "analisis":  # en esta línea, el análisis es una ficha (papel, sin carbón)
         estilo = "ficha"
