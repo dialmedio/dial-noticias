@@ -266,31 +266,8 @@ def espaciado(d, x, y, texto, f, fill, tracking=0.14, sombra=False):
 
 
 def aro(img, cx, cy, d, color, punto=BRASA, angulo=90):
-    """El símbolo de Dial (marca v4, el aro con punto) en la estación de Termómetro: el punto a 90°,
-    a la derecha. Reemplaza a la hoja desde el 29 oct 2026 (lo pidió Martín). Medidas de
-    dial-web/src/lib/aro.mjs, en una caja de 200: R 84, trazo 22,4, punto 24,9, aire 9,4.
-    d = lado de la caja en px; (cx, cy) = su centro."""
-    s = 4
-    tam = round(d * s)
-    k = tam / 200
-    c = tam / 2
-    rc, trazo, rp, aire = (84 - 11.2) * k, 22.4 * k, 24.9 * k, 9.4 * k
-    a = np.radians(angulo - 90)
-    px, py = c + rc * np.cos(a), c + rc * np.sin(a)
-    anillo = Image.new("L", (tam, tam), 0)
-    da = ImageDraw.Draw(anillo)
-    da.ellipse([c - rc - trazo / 2, c - rc - trazo / 2, c + rc + trazo / 2, c + rc + trazo / 2], fill=255)
-    da.ellipse([c - rc + trazo / 2, c - rc + trazo / 2, c + rc - trazo / 2, c + rc - trazo / 2], fill=0)
-    da.ellipse([px - rp - aire, py - rp - aire, px + rp + aire, py + rp + aire], fill=0)
-    bola = Image.new("L", (tam, tam), 0)
-    ImageDraw.Draw(bola).ellipse([px - rp, py - rp, px + rp, py + rp], fill=255)
-    capa = Image.new("RGBA", (tam, tam), tuple(color[:3]) + (0,))
-    capa.putalpha(anillo)
-    p = Image.new("RGBA", (tam, tam), tuple(punto[:3]) + (0,))
-    p.putalpha(bola)
-    capa.alpha_composite(p)
-    capa = capa.resize((round(d), round(d)), Image.LANCZOS)
-    img.alpha_composite(capa, (round(cx - d / 2), round(cy - d / 2)))
+    """El aro de Dial en la estación de Termómetro (punto a 90°). v5: el aro de pluma común (al_aire.aro)."""
+    aa.aro(img, cx, cy, d, tuple(color[:3]), tuple(punto[:3]), angulo)
 
 
 def antetitulo(img, x, y, texto, color, hoja=None, sombra=False):
@@ -330,12 +307,7 @@ def pie(img, contenido, color, n=None, cfg=None):
     los créditos van en la descripción, como siempre. "pie": true en el JSON los vuelve a poner."""
     if not (cfg and cfg.get("pie")):
         return
-    W, H, M, B, R = g("W"), g("H"), g("M"), g("B"), g("R")
-    d = ImageDraw.Draw(img)
-    d.text((M, H - B + 58), contenido.upper(), font=dn.mono(15), fill=color, anchor="ls")
-    total = len(cfg.get("laminas", [])) if cfg else 0
-    if n and total:
-        d.text((W - M - R, H - B + 58), f"{n:02d} / {total:02d}", font=dn.mono(17, True), fill=color, anchor="rs")
+    aa.pie(img, contenido, color)  # v5: en letra de texto, sin mono ni contador
 
 
 # ------------------------------------------------------------ riso de dos tintas
@@ -370,64 +342,12 @@ def banda(cfg, lam, tam):
 
 # ------------------------------------------------------------ película (29 oct 2026)
 
-def pelicula(img, semilla, cfg=None, fuerza=1.0):
-    """Textura de foto análoga. Martín, 29 oct 2026: foto de fondo en todas las láminas, "con una textura
-    de foto análoga", más fotográfico que de infografía. El 18 oct el ruido digital se había visto de baja
-    calidad, así que esto imita la película y no el sensor: negros levantados, sombras un poco cálidas,
-    un halo rojizo alrededor de las luces (halación) y un grano fino que se agrupa, más visible en los
-    medios tonos y casi sin color. Va sobre la foto y antes del texto, que queda nítido.
-    "pelicula": false en el JSON la apaga."""
-    if cfg is not None and cfg.get("pelicula") is False:
-        return img
-    a = np.asarray(img.convert("RGB"), np.float32) / 255
-    h, w = a.shape[:2]
-    lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
-    luz = np.clip((lum - 0.7) / 0.3, 0, 1)
-    halo = Image.fromarray((luz * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(max(4, w * 0.011)))
-    a = a + (np.asarray(halo, np.float32) / 255)[..., None] * np.array([0.22, 0.075, 0.02], np.float32) * fuerza
-    a = 0.04 + a * 0.92  # negros levantados y luces que no queman, como en el papel
-    a = a + ((1 - lum) ** 2)[..., None] * np.array([0.02, 0.008, -0.014], np.float32) * fuerza
-    rng = np.random.default_rng(semilla)
-    # grano fino (29 oct 2026, 2.ª ronda: el primero se veía grueso): casi del tamaño del píxel y más leve
-    gw, gh = max(2, round(w / 1.12)), max(2, round(h / 1.12))
-    grano = np.asarray(Image.fromarray(rng.normal(0, 1, (gh, gw)).astype(np.float32), "F").resize((w, h), Image.BICUBIC))
-    color = np.stack([np.asarray(Image.fromarray(rng.normal(0, 1, (gh // 2, gw // 2)).astype(np.float32), "F")
-                                 .resize((w, h), Image.BICUBIC)) for _ in range(3)], -1)
-    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.026 * fuerza
-    a = a + grano[..., None] * peso[..., None] + color * 0.004 * fuerza
-    # fuga de luz: un resplandor cálido que entra por un borde, distinto en cada lámina (pantalla)
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    borde = rng.integers(4)
-    dist = [xx / w, 1 - xx / w, yy / h, 1 - yy / h][borde]
-    centro = rng.uniform(0.15, 0.85)
-    eje = [yy / h, yy / h, xx / w, xx / w][borde]
-    fuga = np.exp(-(dist / 0.16) ** 2) * np.exp(-((eje - centro) / 0.35) ** 2) * rng.uniform(0.10, 0.2) * fuerza
-    tono = np.array([1.0, 0.48, 0.2], np.float32)
-    a = 1 - (1 - a) * (1 - fuga[..., None] * tono)
-    # viñeta suave, como la de un lente viejo
-    r = np.sqrt(((xx / w - 0.5) / 0.5) ** 2 + ((yy / h - 0.5) / 0.5) ** 2) / np.sqrt(2)
-    a = a * (1 - 0.18 * np.clip(r - 0.45, 0, 1) ** 1.4 / 0.55 ** 1.4)[..., None]
-    out = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
-    # polvo y algún pelo en el negativo: pocos y pequeños, claros (en la copia, el polvo sale blanco)
-    polvo = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    dp = ImageDraw.Draw(polvo)
-    for _ in range(int(rng.integers(14, 26))):
-        px, py, rr = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(0.6, 2.2)
-        dp.ellipse([px - rr, py - rr * rng.uniform(0.6, 1.4), px + rr, py + rr], fill=(250, 246, 236, int(rng.integers(60, 140))))
-    for _ in range(int(rng.integers(0, 3))):
-        x0, y0 = rng.uniform(0, w), rng.uniform(0, h)
-        puntos = [(x0 + k * rng.uniform(4, 9), y0 + np.sin(k / 3 + rng.uniform(0, 3)) * 6 + k * rng.uniform(-3, 3)) for k in range(int(rng.integers(6, 14)))]
-        dp.line(puntos, fill=(250, 246, 236, 70), width=1)
-    out.alpha_composite(polvo.filter(ImageFilter.GaussianBlur(0.5)))
-    if img.mode == "RGBA":
-        out.putalpha(img.getchannel("A"))
-    return out
+pelicula = dn.pelicula  # v5 (29 oct 2026): la película es de todas las líneas y vive en dial_noticias.py
 
 
 def foto_fondo(cfg, lam, n):
-    """La foto de la lámina, a sangre y con película (en video va sin, porque la capa es transparente)."""
-    img = aa.foto_base(cfg, lam)
-    return img if lam.get("_video") else pelicula(img, 300 + n, cfg)
+    """La foto de la lámina, a sangre. La película ya viene en la foto (dn.preparar_foto, v5)."""
+    return aa.foto_base(cfg, lam)
 
 
 def parrafo_serif(img, x, y, contenido, tam, ancho, color, cursiva_=True, inter=1.18):
@@ -509,7 +429,7 @@ def l_ficha(cfg, lam, n):
         img.alpha_composite(banda(cfg, lam, (W, alto_foto)), (0, 0))
         y = alto_foto + 56
         if lam.get("pie_foto"):
-            ImageDraw.Draw(img).text((M, alto_foto + 34), lam["pie_foto"].upper(), font=dn.mono(18), fill=GRIS, anchor="ls")
+            espaciado(ImageDraw.Draw(img), M, alto_foto + 34, lam["pie_foto"].upper(), dn.sans(17, 600, 100), GRIS)
             y += 18
     d = ImageDraw.Draw(capa)
     if lam.get("rotulo"):
@@ -543,7 +463,7 @@ def l_ficha(cfg, lam, n):
     fi = dn.sans(40, 600, 90)
     for i, it in enumerate(lam.get("items", []), 1):  # lista numerada en cursiva terracota
         lineas = aa.partir(it, fi, ancho - 64)
-        d.text((M, y + 46), str(i), font=cursiva(58), fill=TERRACOTA, anchor="ls")
+        d.text((M, y + 46), str(i), font=cursiva(58), fill=BRASA, anchor="ls")
         for k, linea in enumerate(lineas):
             d.text((M + 64, y + 42 + k * 48), linea, font=fi, fill=CARBON, anchor="ls")
         y += 62 + 48 * (len(lineas) - 1)
@@ -586,7 +506,7 @@ def l_serie(cfg, lam, n):
     tope = max(fila[1] for fila in serie)
     grupos = lam.get("grupos", [])
     tonos = [(204, 194, 180), SALVIA]
-    fe, fv = dn.mono(24, True), dn.sans(32, 600, 88)
+    fe, fv = dn.sans(24, 650, 100), dn.sans(32, 600, 88)
     col, alto_barra, paso = 110, 46, (70 if len(serie) <= 6 else 62)
     largo = ancho - col - 150
     for k, fila in enumerate(serie):
@@ -851,7 +771,7 @@ def l_cta(cfg, lam, n):
     lg = dn.logo(64)
     img.alpha_composite(lg, (M, round(y_pie + 84)))
     d = ImageDraw.Draw(img)
-    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.mono(28, True), fill=PAPEL, anchor="rs")
+    d.text((W - M - R, y_pie + 84 + 46), lam.get("cuenta", "@dialmedio"), font=dn.cuerpo(28, 450), fill=PAPEL, anchor="rs")
     d.text((M + lg.width + 24, y_pie + 84 + 46), "Sintonizar es conversar.", font=dn.serif(34), fill=BRASA, anchor="ls")
     pie(img, aa.credito(lam) if lam.get("foto") else "", PAPEL + (170,), n, cfg)
     return img

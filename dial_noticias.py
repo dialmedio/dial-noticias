@@ -11,6 +11,7 @@ con la misma colorización (como LUT) y el diseño encima, con su audio.
 Sin grano: Martín prefiere la imagen limpia (el grano se veía como baja calidad).
 """
 import json
+import zlib
 import re
 import sys
 from pathlib import Path
@@ -20,12 +21,18 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 RAIZ = Path(__file__).resolve().parent
 sys.path.insert(0, str(RAIZ))  # para importar al_aire.py también con python -I
+import oficio  # noqa: E402  kerning real en todo lo que dibuja Pillow
 FUENTES = RAIZ / "fuentes"
 
 CARBON = (23, 19, 15)
 PAPEL = (244, 238, 229)
-TERRACOTA = (192, 68, 42)
-TERRACOTA_CLARA = (224, 105, 74)  # la terracota normal se pierde sobre oscuro
+# Marca v5 (29 oct 2026): una sola luz roja, el punto. La terracota de antes es ahora esta luz (mismo nombre).
+LUZ = (212, 81, 46)
+TERRACOTA = LUZ
+TERRACOTA_CLARA = (224, 101, 63)  # la luz para letra pequeña sobre negro
+# Reglas comunes v5 que fija al_aire.lamina() con el JSON de cada noticia:
+PELICULA = True   # todas las fotos se revelan con película ("pelicula": false la apaga)
+PIE = False       # sin créditos ni número en las láminas: van en la descripción ("pie": true los pone)
 
 LADO_CORTO = 1080
 
@@ -129,11 +136,17 @@ def colorizar(img, ajuste=None):
 
 # ---------------------------------------------------------------- tipografía
 
-def fuente(nombre, tam, wdth=None, wght=None):
-    f = ImageFont.truetype(str(FUENTES / nombre), int(round(tam)))
+def fuente(nombre, tam, wdth=None, wght=None, **ejes):
+    """La fuente con kerning real (oficio.py). ejes: otros ejes de la variable, p. ej. opsz=36."""
     if wdth is not None:
-        f.set_variation_by_axes([wdth, wght])
-    return f
+        ejes.update(wdth=wdth, wght=wght)
+    try:
+        return oficio.Fuente(FUENTES / nombre, tam, ejes or None)
+    except Exception:  # sin fontTools: la fuente de siempre, sin kerning
+        f = ImageFont.truetype(str(FUENTES / nombre), int(round(tam)))
+        if wdth is not None:
+            f.set_variation_by_axes([wdth, wght])
+        return f
 
 
 def sans(tam, peso=600, ancho=88):
@@ -144,7 +157,12 @@ def serif(tam):
     return fuente("InstrumentSerif-Italic.ttf", tam)
 
 
-def mono(tam, medio=False):
+def cuerpo(tam, peso=400):
+    """La letra para leer de la marca v5: Bricolage Grotesque al 92 % de ancho, tamaño óptico según el cuerpo."""
+    return fuente("BricolageGrotesque-VF.ttf", tam, opsz=max(12, min(96, tam * 0.4)), wght=peso, wdth=92)
+
+
+def mono(tam, medio=False):  # v5: ninguna lámina usa mono; queda solo por compatibilidad
     return fuente("IBMPlexMono-Medium.ttf" if medio else "IBMPlexMono-Regular.ttf", tam)
 
 
@@ -163,9 +181,10 @@ def _tokens(texto):
 
 
 class Rico:
-    """Texto con acentos en serif cursiva terracota (*así*)."""
+    """Texto con acentos en serif cursiva (*así*). v5: el acento va en la misma tinta del texto (el rojo es solo del punto)."""
 
-    def __init__(self, texto, tam, peso=600, color=PAPEL, acento=TERRACOTA_CLARA, interlineado=1.02):
+    def __init__(self, texto, tam, peso=600, color=PAPEL, acento=None, interlineado=1.02):
+        acento = color if acento is None else acento
         self.tok = _tokens(texto)
         self.f = sans(tam, peso)
         self.fa = serif(tam * 1.16)
@@ -274,10 +293,10 @@ def textura(img, semilla, grano=0.0, vineta=0.16):
 def logo(alto):
     im = Image.open(RAIZ / "marca" / "dial-medio-letras-claro.png").convert("RGBA")
     im = im.crop(im.getbbox())
-    # sobre foto, la terracota pasa a terracota clara (la normal se pierde)
+    # v5 (la pluma): «dial medio» en papel y solo el punto en luz roja
     a = np.asarray(im).astype(np.float32)
     calido = (a[..., 0] - a[..., 2]) > 60
-    a[calido, :3] = TERRACOTA_CLARA
+    a[calido, :3] = LUZ
     im = Image.fromarray(a.astype(np.uint8), "RGBA")
     return im.resize((round(im.width * alto / im.height), round(alto)), Image.LANCZOS)
 
@@ -327,7 +346,65 @@ def preparar_foto(ruta, ajuste, formato=None, foco=None):
         a, b = (float(x) for x in formato.split(":"))
         tam = (LADO_CORTO, round(LADO_CORTO * b / a)) if a <= b else (round(LADO_CORTO * a / b), LADO_CORTO)
     im = im.resize(tam, Image.LANCZOS)
-    return colorizar(im, ajuste)
+    im = colorizar(im, ajuste)
+    if PELICULA:  # v5: la misma película en todas las líneas, con su fuga de luz propia por foto
+        im = pelicula(im, zlib.crc32(f"{ruta}{formato}{foco}".encode()) % 100000).convert("RGB")
+    return im
+
+
+def pelicula(img, semilla, cfg=None, fuerza=1.0):
+    """Textura de foto análoga. Martín, 29 oct 2026: foto de fondo en todas las láminas, "con una textura
+    de foto análoga", más fotográfico que de infografía. El 18 oct el ruido digital se había visto de baja
+    calidad, así que esto imita la película y no el sensor: negros levantados, sombras un poco cálidas,
+    un halo rojizo alrededor de las luces (halación) y un grano fino que se agrupa, más visible en los
+    medios tonos y casi sin color. Va sobre la foto y antes del texto, que queda nítido.
+    "pelicula": false en el JSON la apaga. Desde la v5 (29 oct 2026) la usan todas las líneas."""
+    if cfg is not None and cfg.get("pelicula") is False:
+        return img
+    a = np.asarray(img.convert("RGB"), np.float32) / 255
+    h, w = a.shape[:2]
+    lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
+    luz = np.clip((lum - 0.7) / 0.3, 0, 1)
+    halo = Image.fromarray((luz * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(max(4, w * 0.011)))
+    a = a + (np.asarray(halo, np.float32) / 255)[..., None] * np.array([0.22, 0.075, 0.02], np.float32) * fuerza
+    a = 0.04 + a * 0.92  # negros levantados y luces que no queman, como en el papel
+    a = a + ((1 - lum) ** 2)[..., None] * np.array([0.02, 0.008, -0.014], np.float32) * fuerza
+    rng = np.random.default_rng(semilla)
+    # grano fino (29 oct 2026, 2.ª ronda: el primero se veía grueso): casi del tamaño del píxel y más leve
+    gw, gh = max(2, round(w / 1.12)), max(2, round(h / 1.12))
+    grano = np.asarray(Image.fromarray(rng.normal(0, 1, (gh, gw)).astype(np.float32), "F").resize((w, h), Image.BICUBIC))
+    color = np.stack([np.asarray(Image.fromarray(rng.normal(0, 1, (gh // 2, gw // 2)).astype(np.float32), "F")
+                                 .resize((w, h), Image.BICUBIC)) for _ in range(3)], -1)
+    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.026 * fuerza
+    a = a + grano[..., None] * peso[..., None] + color * 0.004 * fuerza
+    # fuga de luz: un resplandor cálido que entra por un borde, distinto en cada lámina (pantalla)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    borde = rng.integers(4)
+    dist = [xx / w, 1 - xx / w, yy / h, 1 - yy / h][borde]
+    centro = rng.uniform(0.15, 0.85)
+    eje = [yy / h, yy / h, xx / w, xx / w][borde]
+    fuga = np.exp(-(dist / 0.16) ** 2) * np.exp(-((eje - centro) / 0.35) ** 2) * rng.uniform(0.10, 0.2) * fuerza
+    tono = np.array([1.0, 0.48, 0.2], np.float32)
+    a = 1 - (1 - a) * (1 - fuga[..., None] * tono)
+    # viñeta suave, como la de un lente viejo
+    r = np.sqrt(((xx / w - 0.5) / 0.5) ** 2 + ((yy / h - 0.5) / 0.5) ** 2) / np.sqrt(2)
+    a = a * (1 - 0.18 * np.clip(r - 0.45, 0, 1) ** 1.4 / 0.55 ** 1.4)[..., None]
+    out = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).convert("RGBA")
+    # polvo y algún pelo en el negativo: pocos y pequeños, claros (en la copia, el polvo sale blanco)
+    polvo = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    dp = ImageDraw.Draw(polvo)
+    for _ in range(int(rng.integers(14, 26))):
+        px, py, rr = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(0.6, 2.2)
+        dp.ellipse([px - rr, py - rr * rng.uniform(0.6, 1.4), px + rr, py + rr], fill=(250, 246, 236, int(rng.integers(60, 140))))
+    for _ in range(int(rng.integers(0, 3))):
+        x0, y0 = rng.uniform(0, w), rng.uniform(0, h)
+        puntos = [(x0 + k * rng.uniform(4, 9), y0 + np.sin(k / 3 + rng.uniform(0, 3)) * 6 + k * rng.uniform(-3, 3)) for k in range(int(rng.integers(6, 14)))]
+        dp.line(puntos, fill=(250, 246, 236, 70), width=1)
+    out.alpha_composite(polvo.filter(ImageFilter.GaussianBlur(0.5)))
+    if img.mode == "RGBA":
+        out.putalpha(img.getchannel("A"))
+    return out
+
 
 
 def rotulo_persona(d, W, H, t, persona):
@@ -701,14 +778,16 @@ def _caja(W, H, formato, foco):
 
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    solo = None
+    solo, otra_salida = None, None
     for a in sys.argv[1:]:
         if a.startswith("--solo="):
             solo = {int(x) for x in a[7:].split(",")}
+        if a.startswith("--salida="):  # pruebas y muestras: no pisa la carpeta de la noticia
+            otra_salida = Path(a[9:])
     ruta_json = Path(args[0]).resolve()
     cfg = json.loads(ruta_json.read_text(encoding="utf-8"))
     cfg["_base"] = ruta_json.parent  # fotos y salida pueden ser relativas al JSON
-    salida = cfg["_base"] / cfg.get("salida", "salida")
+    salida = otra_salida or cfg["_base"] / cfg.get("salida", "salida")
     salida.mkdir(parents=True, exist_ok=True)
     hechas = []
     # formato por defecto: 4:5 para todo; un video solo va en 9:16; "original" conserva la proporción
