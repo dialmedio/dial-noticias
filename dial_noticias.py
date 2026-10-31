@@ -340,6 +340,10 @@ def preparar_foto(ruta, ajuste, formato=None, foco=None):
     if formato:
         im = recortar(im, formato, foco or (0.5, 0.5))
     W, H = im.size
+    # Martín, 31 oct 2026: si la foto no es de alta calidad, mejor sin grano; encima del ruido propio de una
+    # foto chica o vieja, el grano solo suma ruido. Con el recorte a la medida de la lámina (o más chico) no
+    # lleva grano; con el doble o más, el grano completo; en medio, proporcional.
+    grano = float(np.clip(min(W, H) / LADO_CORTO - 1, 0, 1))
     esc = LADO_CORTO / min(W, H)
     tam = (round(W * esc), round(H * esc))
     if formato:  # medidas exactas (p. ej. 1080 × 1920), sin errores de redondeo
@@ -348,11 +352,11 @@ def preparar_foto(ruta, ajuste, formato=None, foco=None):
     im = im.resize(tam, Image.LANCZOS)
     im = colorizar(im, ajuste)
     if PELICULA:  # v5: la misma película en todas las líneas, con su fuga de luz propia por foto
-        im = pelicula(im, zlib.crc32(f"{ruta}{formato}{foco}".encode()) % 100000).convert("RGB")
+        im = pelicula(im, zlib.crc32(f"{ruta}{formato}{foco}".encode()) % 100000, grano=grano).convert("RGB")
     return im
 
 
-def pelicula(img, semilla, cfg=None, fuerza=1.0):
+def pelicula(img, semilla, cfg=None, fuerza=1.0, grano=1.0):
     """Textura de foto análoga. Martín, 29 oct 2026: foto de fondo en todas las láminas, "con una textura
     de foto análoga", más fotográfico que de infografía. El 18 oct el ruido digital se había visto de baja
     calidad, así que esto imita la película y no el sensor: negros levantados, sombras un poco cálidas,
@@ -361,6 +365,7 @@ def pelicula(img, semilla, cfg=None, fuerza=1.0):
     "pelicula": false en el JSON la apaga. Desde la v5 (29 oct 2026) la usan todas las líneas."""
     if cfg is not None and cfg.get("pelicula") is False:
         return img
+    calidad = grano  # 0 = sin grano (foto chica o vieja), 1 = grano completo; `grano` se reusa abajo para el ruido
     a = np.asarray(img.convert("RGB"), np.float32) / 255
     h, w = a.shape[:2]
     lum = a @ np.array([0.299, 0.587, 0.114], np.float32)
@@ -375,8 +380,8 @@ def pelicula(img, semilla, cfg=None, fuerza=1.0):
     grano = np.asarray(Image.fromarray(rng.normal(0, 1, (gh, gw)).astype(np.float32), "F").resize((w, h), Image.BICUBIC))
     color = np.stack([np.asarray(Image.fromarray(rng.normal(0, 1, (gh // 2, gw // 2)).astype(np.float32), "F")
                                  .resize((w, h), Image.BICUBIC)) for _ in range(3)], -1)
-    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.026 * fuerza
-    a = a + grano[..., None] * peso[..., None] + color * 0.004 * fuerza
+    peso = (0.4 + 2.4 * lum * (1 - lum)) * 0.026 * fuerza * calidad
+    a = a + grano[..., None] * peso[..., None] + color * 0.004 * fuerza * calidad
     # fuga de luz: un resplandor cálido que entra por un borde, distinto en cada lámina (pantalla)
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     borde = rng.integers(4)

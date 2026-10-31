@@ -39,12 +39,14 @@ SECCIONES = {
 }
 ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA = BRASA, CARBON, BRASA, BRASA, BRASA, PAPEL
 SIMBOLO = "punto"
+RESALTE = True
 
 
 def seccion(cfg):
     """Aplica la tinta de la línea de la noticia (Al Aire por defecto)."""
-    global SELLO, ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA, SIMBOLO
+    global SELLO, ACENTO, FONDO, CAMPO, TINTA, COMILLAS, SOMBRA, SIMBOLO, RESALTE
     s = SECCIONES.get(cfg.get("seccion"), SECCIONES["al-aire"])  # Nuevos mundos usa las medidas y tintas de base
+    RESALTE = cfg.get("seccion") in (None, "al-aire")  # el resaltado en franja es de Al Aire; Arte usa texto() a su modo
     SELLO = cfg.get("sello", s["sello"]).upper()
     ACENTO, FONDO, CAMPO, TINTA = s["acento"], s["fondo"], s["campo"], s["tinta"]
     COMILLAS, SOMBRA = s["comillas"], s["sombra"]
@@ -475,7 +477,31 @@ def partir(texto_, fuente, ancho):
 def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
     r = dn.Rico(contenido, tam, peso, color=color, interlineado=inter)
     r.f = dn.cuerpo(tam, 400 if peso <= 500 else 600)  # v5: la letra para leer es Bricolage
-    return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
+    if not RESALTE:
+        return r.dibujar(ImageDraw.Draw(img), x, y, r.equilibradas(ancho))
+    # lo resaltado (*así*), como pidió Martín para el cuerpo: negrilla de la misma letra, en papel sobre una
+    # franja carbón impresa (31 oct 2026; antes salía en serif cursiva)
+    r.fa, r.acento = dn.cuerpo(tam, 700), PAPEL
+    lin = r.equilibradas(ancho)
+    asc, rects, yy = r.f.getmetrics()[0], [], y
+    for l in lin:
+        cx, base, tramo = x, yy + asc, None
+        for i, tok in enumerate(l):
+            if i:
+                cx += r._esp(tok[0][1])
+            for w, ac in tok:
+                fw = (r.fa if ac else r.f).getlength(w)
+                if ac:
+                    tramo = [cx, cx + fw] if tramo is None else [tramo[0], cx + fw]
+                elif tramo:
+                    rects.append((tramo[0] - 10, base - tam * 0.92, tramo[1] + 10, base + tam * 0.3))
+                    tramo = None
+                cx += fw
+        if tramo:
+            rects.append((tramo[0] - 10, base - tam * 0.92, tramo[1] + 10, base + tam * 0.3))
+        yy += r.alto_linea
+    mt.franja(img, rects, CARBON, int(x + y) % 997)
+    return r.dibujar(ImageDraw.Draw(img), x, y, lin)
 
 
 def pie(img, contenido, color):
@@ -596,12 +622,19 @@ def l_foto(cfg, lam):
     return img
 
 
-def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON):
+def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON, alto_max=None):
+    """Tipo de madera. Con saltos de línea ("JOSÉ MANUEL\\nCONTRA\\nJOSÉ MANUEL", 31 oct 2026) las líneas se apilan
+    hacia arriba desde y_base y el tamaño baja hasta que caben en el ancho y en alto_max."""
+    lineas = palabra.split("\n")
     tam = 360
-    while madera(tam).getlength(palabra) > (W - 2 * M - R) + 20 and tam > 120:
+    while max(madera(tam).getlength(t) for t in lineas) > (W - 2 * M - R) + 20 and tam > 100:
         tam -= 10
+    while alto_max and len(lineas) > 1 and tam * (0.72 + 0.86 * (len(lineas) - 1)) > alto_max and tam > 100:
+        tam -= 6
     m = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(m).text((M - tam * 0.04, y_base), palabra, font=madera(tam), fill=255, anchor="ls")
+    dm = ImageDraw.Draw(m)
+    for k, t in enumerate(lineas):
+        dm.text((M - tam * 0.04, y_base - (len(lineas) - 1 - k) * tam * 0.86), t, font=madera(tam), fill=255, anchor="ls")
     # segunda pasada de otra tinta, con su propia textura y un registro apenas corrido (no es una sombra)
     estampar(img, m, sombra, semilla + 7, desfase=(7, 6), opacidad=0.85, debajo_de=m)
     estampar(img, m, color, semilla + 1)
@@ -637,7 +670,8 @@ def l_pais(cfg, lam, n):
         y += 50
     sube = max(0, y - (H - B - 30))
     sube = min(sube, 330)  # el título no puede subir más allá de la cabecera
-    palabra_madera(final, lam["titulo"].upper(), T + 538 - sube, 3 + n, color=CARBON, sombra=SOMBRA)
+    palabra_madera(final, lam["titulo"].upper(), T + 538 - sube, 3 + n, color=CARBON, sombra=SOMBRA,
+                   alto_max=T + 538 - sube - (T + 130))
     final.alpha_composite(img.crop((0, sube, W, sube + H)))
     if y - sube > H - B - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o los items")
