@@ -509,6 +509,31 @@ def degradado_bajo(img, desde=0.42, fuerza=0.92):
     img.alpha_composite(dn.degradado_inferior(W, H, desde=desde, fuerza=fuerza))
 
 
+def marca_serie(img, y, serie, semilla=1):
+    """Serie por entregas (31 oct 2026, «La reforma, por partes»): sobre el titular de la portada, una etiqueta
+    con el nombre y la parte, y una regleta de franjas impresas, una por entrega: las que ya salieron en brasa,
+    las que faltan apenas marcadas. Dice sin abrir el carrusel que la pieza es una parte de algo más largo.
+    serie: {"nombre", "parte", "de"}. Devuelve el alto que ocupa (también sirve para medir con img=None)."""
+    parte, de = serie.get("parte", 1), serie.get("de", 1)
+    alto_e = 26 * 1.7
+    if img is None:
+        return alto_e + 16 + 10
+    fin = etiqueta(img, M, y, f"{serie['nombre'].upper()} · PARTE {parte} DE {de}", fondo=PAPEL, punto=False, tam=26)
+    x0, x1, yr = M, W - M - R, y + alto_e + 16
+    if x1 - (fin + 28) >= 40 * de:  # cabe al lado de la etiqueta: la regleta va en la misma línea
+        x0, yr = fin + 28, y + alto_e / 2 - 5
+    paso = (x1 - x0 + 10) / de
+    hechas = [(x0 + k * paso, yr, x0 + (k + 1) * paso - 10, yr + 10) for k in range(parte)]
+    faltan = [(x0 + k * paso, yr, x0 + (k + 1) * paso - 10, yr + 10) for k in range(parte, de)]
+    capa = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    mt.franja(capa, faltan, PAPEL, semilla + 3)
+    a = np.asarray(capa).copy()
+    a[..., 3] = (a[..., 3] * 0.38).astype(np.uint8)
+    img.alpha_composite(Image.fromarray(a))
+    mt.franja(img, hechas, ACENTO, semilla + 5)
+    return alto_e + 16 + 10
+
+
 def l_portada(cfg, lam):
     img = foto_base(cfg, lam)
     if lam.get("degradado"):  # fotos claras: degradado más alto y más fuerte, [desde, fuerza]
@@ -525,8 +550,12 @@ def l_portada(cfg, lam):
         g[..., :3] = CARBON
         g[..., 3] = (0.55 * np.clip(1 - x / (lam["ancho"] + 0.2), 0, 1) ** 1.3 * np.ones((H, 1)) * 255).astype(np.uint8)
         img.alpha_composite(Image.fromarray(g, "RGBA"))
-    alto = alto_titular(lam["titulo"], tam, an) + (30 + alto_texto(baj, 38, an - 40) if baj else 0)
-    y = dibujar_titular(img, M, H - B - alto, lam["titulo"], tam, an)
+    serie = lam.get("serie") or cfg.get("serie")
+    alto_s = marca_serie(None, 0, serie) + 34 if serie else 0
+    alto = alto_s + alto_titular(lam["titulo"], tam, an) + (30 + alto_texto(baj, 38, an - 40) if baj else 0)
+    if serie:
+        marca_serie(img, H - B - alto, serie, cfg.get("semilla", 1))
+    y = dibujar_titular(img, M, H - B - alto + alto_s, lam["titulo"], tam, an)
     if baj:
         texto(img, M, y + 30, baj, 38, an - 40, PAPEL + (235,))
     pie(img, credito(lam), PAPEL + (190,))
@@ -537,7 +566,15 @@ def l_foto(cfg, lam):
     img = foto_base(cfg, lam)
     arriba = lam.get("posicion") == "arriba"
     if arriba:  # el cartel o la persona están abajo: el texto sube bajo la cabecera
-        img.alpha_composite(dn.degradado_superior(W, H, hasta=0.55, fuerza=0.88))
+        if lam.get("velo"):  # fotos cargadas (una multitud): velo pleno hasta casi `hasta` y luego se abre
+            hasta, fuerza = lam["velo"]
+            y_ = np.linspace(0, 1, H)[:, None]
+            g = np.zeros((H, W, 4), np.uint8)
+            g[..., :3] = CARBON
+            g[..., 3] = (fuerza * np.clip((hasta - y_) / 0.2, 0, 1) ** 1.3 * np.ones((1, W)) * 255).astype(np.uint8)
+            img.alpha_composite(Image.fromarray(g, "RGBA"))
+        else:
+            img.alpha_composite(dn.degradado_superior(W, H, hasta=0.55, fuerza=0.88))
     elif lam.get("degradado"):  # fotos claras: degradado más alto y más fuerte, [desde, fuerza]
         degradado_bajo(img, *lam["degradado"])
     else:
