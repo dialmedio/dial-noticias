@@ -801,10 +801,87 @@ def estilo_de(lam):
     return "foto"
 
 
+_SESION_RECORTE = None
+
+
+def silueta(foto, cache=None):
+    """Máscara de la persona (0-255), sin el fondo: rembg con el modelo de personas (u2net_human_seg).
+    Se guarda junto a la foto (`cache`) para no recalcularla. Sin rembg, devuelve None."""
+    global _SESION_RECORTE
+    if cache and Path(cache).exists():
+        m = Image.open(cache).convert("L")
+        if m.size == foto.size:
+            return m
+    try:
+        from rembg import new_session, remove
+    except ImportError:
+        print("  ojo: sin rembg el recorte va con su fondo")
+        return None
+    if _SESION_RECORTE is None:
+        _SESION_RECORTE = new_session("u2net_human_seg")
+    m = remove(foto, session=_SESION_RECORTE, only_mask=True).convert("L")
+    if cache:
+        m.save(cache)
+    return m
+
+
 def pegar_recorte(img, cfg, rc, n):
-    """Recorte tipo collage (23 oct 2026): una foto pegada con borde de papel, el canto de abajo
-    rasgado, un giro leve y sombra, que se sale de su franja. Campos: foto, x, y, ancho, alto,
-    foco, giro, pie (texto en caja bajo la foto)."""
+    """Recorte de persona (31 oct 2026; reemplaza la foto con borde de papel y canto rasgado, que a Martín
+    le pareció fea): la silueta sin fondo, impresa en trama de periódico.
+
+    estilo "prensa" (por defecto): un recorte de periódico, papel de prensa con la cara en trama carbón.
+    estilo "tinta": la trama carbón directo sobre el campo, con una pasada de papel corrida debajo, como el
+    tipo de madera. Campos: foto, x, y, ancho, alto (la caja donde cabe), foco, zoom, estilo, celda (tamaño
+    del punto), pie. La silueta se calcula una vez sobre la foto en alta y se guarda al lado (<foto>-silueta-*.png)."""
+    if rc.get("estilo") == "marco":  # el collage viejo, solo si se pide
+        return pegar_marco(img, cfg, rc, n)
+    ruta = cfg["_base"] / rc["foto"]
+    foto = Image.open(ruta).convert("RGB")
+    w = rc.get("ancho", 300)
+    h = rc.get("alto", round(w * 1.25))
+    fx, fy = rc.get("foco", (0.5, 0.4))
+    s = max(w / foto.width, h / foto.height) * rc.get("zoom", 1.0)
+    # la caja en la foto original, para recortar la silueta en alta
+    cw, ch = w / s, h / s
+    x0 = min(max(fx * foto.width - cw / 2, 0), foto.width - cw)
+    y0 = min(max(fy * foto.height - ch / 2, 0), foto.height - ch)
+    caja = (round(x0), round(y0), round(x0 + cw), round(y0 + ch))
+    alta = foto.crop(caja)
+    m = silueta(alta, ruta.with_name(f"{ruta.stem}-silueta-{caja[0]}-{caja[1]}-{caja[2]}-{caja[3]}.png"))
+    alta, m = alta.resize((w, h), Image.LANCZOS), (m.resize((w, h), Image.LANCZOS) if m else Image.new("L", (w, h), 255))
+    ma = np.asarray(m, np.float32) / 255
+    # gris con contraste propio dentro de la silueta, para que la trama tenga negros y blancos de verdad
+    g = np.asarray(alta.convert("L"), np.float32) / 255
+    dentro = g[ma > 0.5] if (ma > 0.5).any() else g.ravel()
+    lo, hi = np.percentile(dentro, 3), np.percentile(dentro, 97)
+    g = np.clip((g - lo) / max(hi - lo, 1e-3), 0, 1) ** 0.9
+    tinta = mt.semitono(g, celda=rc.get("celda", 6.5), angulo=45, semilla=7 + n) * ma
+    x, y = rc["x"], rc["y"]
+    base = np.asarray(img, np.float32)[..., :3].copy()
+    alfa_img = np.asarray(img)[..., 3:]
+    sub = base[y:y + h, x:x + w]
+    hh, ww = sub.shape[:2]
+    ma, tinta = ma[:hh, :ww], tinta[:hh, :ww]
+    if rc.get("estilo", "prensa") == "prensa":
+        # el papel del recorte, con su fibra, y la tinta impresa encima
+        papel_ = mt.papel(ww, hh, HUESO, 40 + n)
+        sub = sub * (1 - ma[..., None]) + papel_ * ma[..., None]
+    else:
+        # pasada de papel corrida debajo, como la segunda tinta del tipo de madera
+        d = 8
+        pm = np.zeros_like(ma)
+        pm[d:, d:] = ma[:-d, :-d]
+        sub = mt.entintar(sub, pm * 0.9, PAPEL, 40 + n, multiplicar=False)
+    sub = mt.entintar(sub, tinta, CARBON, 50 + n, multiplicar=True, borde=0)
+    base[y:y + hh, x:x + ww] = sub
+    img.paste(Image.fromarray(np.dstack([np.clip(base, 0, 255), alfa_img]).astype(np.uint8), "RGBA"))
+    if rc.get("pie"):
+        etiqueta(img, x + 20, y + h - 46, rc["pie"].upper(), fondo=ACENTO, color=CARBON, punto=False, tam=24)
+
+
+def pegar_marco(img, cfg, rc, n):
+    """El collage del 23 oct 2026: una foto pegada con borde de papel, el canto de abajo rasgado, un giro leve
+    y sombra. Ya no es el de base (a Martín le pareció feo, 31 oct 2026); queda con "estilo": "marco"."""
     foto = Image.open(cfg["_base"] / rc["foto"]).convert("RGB")
     w = rc.get("ancho", 300)
     h = rc.get("alto", round(w * 1.25))
