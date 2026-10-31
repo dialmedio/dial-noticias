@@ -629,12 +629,13 @@ def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON, al
     tam = 360
     while max(madera(tam).getlength(t) for t in lineas) > (W - 2 * M - R) + 20 and tam > 100:
         tam -= 10
-    while alto_max and len(lineas) > 1 and tam * (0.72 + 0.86 * (len(lineas) - 1)) > alto_max and tam > 100:
+    paso = 1.0  # entre líneas: las tildes de las mayúsculas (JOSÉ) no pueden montarse en la línea de arriba
+    while alto_max and len(lineas) > 1 and tam * (0.92 + paso * (len(lineas) - 1)) > alto_max and tam > 100:
         tam -= 6
     m = Image.new("L", (W, H), 0)
     dm = ImageDraw.Draw(m)
     for k, t in enumerate(lineas):
-        dm.text((M - tam * 0.04, y_base - (len(lineas) - 1 - k) * tam * 0.86), t, font=madera(tam), fill=255, anchor="ls")
+        dm.text((M - tam * 0.04, y_base - (len(lineas) - 1 - k) * tam * paso), t, font=madera(tam), fill=255, anchor="ls")
     # segunda pasada de otra tinta, con su propia textura y un registro apenas corrido (no es una sombra)
     estampar(img, m, sombra, semilla + 7, desfase=(7, 6), opacidad=0.85, debajo_de=m)
     estampar(img, m, color, semilla + 1)
@@ -808,7 +809,7 @@ def pegar_recorte(img, cfg, rc, n):
     w = rc.get("ancho", 300)
     h = rc.get("alto", round(w * 1.25))
     fx, fy = rc.get("foco", (0.5, 0.4))
-    s = max(w / foto.width, h / foto.height)
+    s = max(w / foto.width, h / foto.height) * rc.get("zoom", 1.0)  # zoom > 1: solo la cara (31 oct 2026)
     fw, fh = round(foto.width * s), round(foto.height * s)
     foto = foto.resize((fw, fh), Image.LANCZOS)
     cx = int(min(max(fx * fw - w / 2, 0), fw - w))
