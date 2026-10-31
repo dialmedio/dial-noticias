@@ -622,12 +622,14 @@ def l_foto(cfg, lam):
     return img
 
 
-def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON, alto_max=None):
+def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON, alto_max=None, caja=None):
     """Tipo de madera. Con saltos de línea ("JOSÉ MANUEL\\nCONTRA\\nJOSÉ MANUEL", 31 oct 2026) las líneas se apilan
-    hacia arriba desde y_base y el tamaño baja hasta que caben en el ancho y en alto_max."""
+    hacia arriba desde y_base y el tamaño baja hasta que caben en el ancho y en alto_max. Con caja = [x0, x1]
+    las líneas van centradas entre x0 y x1 (p. ej. entre dos recortes que se miran)."""
     lineas = palabra.split("\n")
     tam = 360
-    while max(madera(tam).getlength(t) for t in lineas) > (W - 2 * M - R) + 20 and tam > 100:
+    ancho = (caja[1] - caja[0]) if caja else (W - 2 * M - R) + 20
+    while max(madera(tam).getlength(t) for t in lineas) > ancho and tam > 100:
         tam -= 10
     paso = 1.0  # entre líneas: las tildes de las mayúsculas (JOSÉ) no pueden montarse en la línea de arriba
     while alto_max and len(lineas) > 1 and tam * (0.92 + paso * (len(lineas) - 1)) > alto_max and tam > 100:
@@ -635,7 +637,11 @@ def palabra_madera(img, palabra, y_base, semilla, color=PAPEL, sombra=CARBON, al
     m = Image.new("L", (W, H), 0)
     dm = ImageDraw.Draw(m)
     for k, t in enumerate(lineas):
-        dm.text((M - tam * 0.04, y_base - (len(lineas) - 1 - k) * tam * paso), t, font=madera(tam), fill=255, anchor="ls")
+        yl = y_base - (len(lineas) - 1 - k) * tam * paso
+        if caja:
+            dm.text(((caja[0] + caja[1]) / 2, yl), t, font=madera(tam), fill=255, anchor="ms")
+        else:
+            dm.text((M - tam * 0.04, yl), t, font=madera(tam), fill=255, anchor="ls")
     # segunda pasada de otra tinta, con su propia textura y un registro apenas corrido (no es una sombra)
     estampar(img, m, sombra, semilla + 7, desfase=(7, 6), opacidad=0.85, debajo_de=m)
     estampar(img, m, color, semilla + 1)
@@ -672,7 +678,7 @@ def l_pais(cfg, lam, n):
     sube = max(0, y - (H - B - 30))
     sube = min(sube, 330)  # el título no puede subir más allá de la cabecera
     palabra_madera(final, lam["titulo"].upper(), T + 538 - sube, 3 + n, color=CARBON, sombra=SOMBRA,
-                   alto_max=T + 538 - sube - (T + 130))
+                   alto_max=T + 538 - sube - (T + 130), caja=lam.get("titulo_caja"))
     final.alpha_composite(img.crop((0, sube, W, sube + H)))
     if y - sube > H - B - 10:
         print(f"  ojo: la lámina {n} se pasa de alto; acorta el texto o los items")
@@ -849,6 +855,8 @@ def pegar_recorte(img, cfg, rc, n):
     alta = foto.crop(caja)
     m = silueta(alta, ruta.with_name(f"{ruta.stem}-silueta-{caja[0]}-{caja[1]}-{caja[2]}-{caja[3]}.png"))
     alta, m = alta.resize((w, h), Image.LANCZOS), (m.resize((w, h), Image.LANCZOS) if m else Image.new("L", (w, h), 255))
+    if rc.get("espejo"):  # la misma foto volteada, p. ej. para que dos recortes se miren (31 oct 2026)
+        alta, m = alta.transpose(Image.FLIP_LEFT_RIGHT), m.transpose(Image.FLIP_LEFT_RIGHT)
     ma = np.asarray(m, np.float32) / 255
     # gris con contraste propio dentro de la silueta, para que la trama tenga negros y blancos de verdad
     g = np.asarray(alta.convert("L"), np.float32) / 255
@@ -859,9 +867,12 @@ def pegar_recorte(img, cfg, rc, n):
     x, y = rc["x"], rc["y"]
     base = np.asarray(img, np.float32)[..., :3].copy()
     alfa_img = np.asarray(img)[..., 3:]
-    sub = base[y:y + h, x:x + w]
+    # el recorte puede salirse por los bordes de la lámina (a sangre): solo se pinta lo que cae adentro
+    ox, oy = max(0, -x), max(0, -y)
+    x, y = max(0, x), max(0, y)
+    sub = base[y:y + h - oy, x:x + w - ox]
     hh, ww = sub.shape[:2]
-    ma, tinta = ma[:hh, :ww], tinta[:hh, :ww]
+    ma, tinta = ma[oy:oy + hh, ox:ox + ww], tinta[oy:oy + hh, ox:ox + ww]
     if rc.get("estilo", "prensa") == "prensa":
         # el papel del recorte, con su fibra, y la tinta impresa encima
         papel_ = mt.papel(ww, hh, HUESO, 40 + n)
