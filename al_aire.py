@@ -656,7 +656,12 @@ def l_pais(cfg, lam, n):
     img = Image.new("RGBA", (W, H * 2), (0, 0, 0, 0))
     y = T + 598
     if lam.get("rotulo"):
-        etiqueta(img, M, y, lam["rotulo"].upper(), fondo=CARBON, color=PAPEL, punto=False, tam=26)
+        xr = M
+        if lam.get("titulo_caja"):  # título centrado entre recortes: el rótulo también va al centro
+            tam_r = 26
+            ancho_r = ancho_versal(lam["rotulo"].upper(), etiqueta_f(tam_r * 1.1), 0.05) + 2 * tam_r * 0.55
+            xr = sum(lam["titulo_caja"]) / 2 - ancho_r / 2
+        etiqueta(img, xr, y, lam["rotulo"].upper(), fondo=CARBON, color=PAPEL, punto=False, tam=26)
         y += 90
     if lam.get("texto"):
         y = texto(img, M, y, lam["texto"], 46, (W - 2 * M - R), CARBON) + 20
