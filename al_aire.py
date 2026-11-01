@@ -608,12 +608,13 @@ def l_foto(cfg, lam):
     cabecera(img, lam.get("meta", cfg["meta"]))
     ancho = W * lam["ancho"] - M if lam.get("ancho") else (W - 2 * M - R)
     tx, tt = lam.get("texto", ""), lam.get("titulo", "")
-    alto = (alto_titular(tt, 84, ancho) + 18 if tt else 0) + alto_texto(tx, 42, ancho)
+    sep_ = lam.get("espacio", 18)  # aire entre el titular y el texto (31 oct 2026: 44 en la parte 3 de «La reforma, por partes»)
+    alto = (alto_titular(tt, 84, ancho) + sep_ if tt else 0) + alto_texto(tx, 42, ancho)
     y = H - B - alto if not arriba else T + 190
     if lam.get("rotulo"):
         etiqueta(img, M, y - 78, lam["rotulo"].upper(), fondo=PAPEL, punto=False, tam=26)
     if tt:
-        y = dibujar_titular(img, M, y, tt, 84, ancho) + 18
+        y = dibujar_titular(img, M, y, tt, 84, ancho) + sep_
     texto(img, M, y, tx, 42, ancho, PAPEL + (240,))
     personas = lam.get("persona") or []
     for p in ([personas] if isinstance(personas, dict) else personas):
