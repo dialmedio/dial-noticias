@@ -7,6 +7,7 @@ Kit de Dial Medio para publicar noticias del día: a partir de fotos o videos, g
 - `dial_noticias.py`: el generador (Python + Pillow + numpy; ffmpeg para videos).
 - `al_aire.py`: el diseño Al Aire (cabecera, titulares condensados con franja brasa, láminas sin foto); `nuevos_mundos.py` (Termómetro), `arte.py`, `tecnologia.py` y `mundos.py`, las demás líneas.
 - `oficio.py` (kerning real con fontTools) y `materia.py` (papel, tinta, trama y rasgado): lo común de todas las líneas desde la v3.
+- `iluminado.py` (grabado de buril, fotograbado para personas, aguada, paisaje continuo, pincelada, hoja rasgada, dos voces) y `REFERENTES.md` (lo aprendido de los referentes que manda Martín y cómo usarlo). Requiere además `scipy` y `rembg`.
 - `ejemplo/`: el JSON del plantón del Museo Nacional (17 oct 2026). Las fotos no están incluidas.
 
 ```bash

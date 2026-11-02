@@ -25,6 +25,14 @@ Martín aprobó la marca v5 de Dial, «de la pantalla a la materia» (manual: ht
 10. **Cierre igual en todas.** La pregunta que hila la pieza, una línea «Comenta · Guarda · Comparte» en versales (la primera palabra en el color de la línea), la firma, «Sintonizar es conversar.» en el color de la línea y @dialmedio en letra de texto.
 11. **Formato y estructura**, como en la sección 3: 4:5, todas las láminas iguales, portada con pregunta y una cara, un solo hilo, máximo 6 láminas.
 
+## Referentes: técnicas aprendidas (desde el 2 nov 2026)
+
+Martín manda piezas de otras cuentas que le gustan (`/calco <enlace>`) para que Dial aprenda sus técnicas de diseño y de escritura, no para copiarlas. Cada referente deja una ficha en `REFERENTES.md` (qué hace, por qué funciona, cómo lo traduce Dial, cuándo usarlo, errores de oficio) y herramientas en el código.
+
+- **Grabado iluminado** (`iluminado.py`, ficha 1, aprobado el 2 nov): paisaje panorámico continuo entre láminas en grabado de buril, de día en papel y de noche en cartulina; aguada a mano solo en lo vivo (añil en el agua); horizonte recortado; isolíneas; hoja rasgada; pincelada seca y subrayado de marcador; dos voces tipográficas (Instrument Sans afirma, Fraunces itálica siente); lista-poema; cartel de junta con la cifra en aguada.
+- **Personas recortadas** (`il.persona`): sí van y serán centrales. En fotograbado (tono continuo con grano), impresas en el papel de la lámina, sin delineado; la prenda de color iluminada, nunca la piel; el texto nunca toca la cara. Plantas y objetos en buril (`il.figura_buril`).
+- Antes de entregar, la «Revisión de oficio» de la ficha.
+
 ## Sistema común v3: una familia, seis voces (24 oct 2026) — base de la v5
 
 Martín pidió revisar todas las líneas juntas, como se ven en el feed, para que queden al mismo nivel, elegantes y coherentes, y sobre todo que se vean lo menos "Claude", robóticas y digitales posible. Lo común lo hacen tres módulos que usan todas las líneas; cada línea conserva su voz (color, letra y material).
