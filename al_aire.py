@@ -762,26 +762,35 @@ def l_cta(cfg, lam, n):
     """Cierre (v2, 19 oct 2026): la pregunta para comentar y la invitación a seguir a Dial Medio.
 
     Campos: pregunta (con *acento*, abierta y sin tomar partido), texto (opcional, una frase que
-    la aterriza), cuenta (por defecto @dialmedio). Siempre es la última lámina del carrusel."""
+    la aterriza), mision (por defecto la de Dial; false la quita; no se repite si el texto ya la
+    trae), cuenta (por defecto @dialmedio). Siempre es la última lámina del carrusel.
+
+    2 nov 2026: sin el signo grande de tipo de madera («no funciona muy bien», Martín). En su lugar,
+    la o de pluma del aro, grande y cortada por el borde (ficha 2 de REFERENTES.md), y la misión."""
+    import afiche as af  # aquí y no arriba: afiche usa este módulo
     img = campo(FONDO, 40 + n, 0.06)
+    anillo = {"c": [W - 10, round(H * 0.46), 330], "punta": 34, "tinta": TINTA, "opacidad": 0.22}
+    af.anillos(img, [{**anillo, **lam.get("anillo", {})}], n)
     cabecera(img, (lam.get("rotulo") or "Conversemos").upper(), sobre_foto=False)
     d = ImageDraw.Draw(img)
     ancho = W - 2 * M - R
-    # signo grande en tipo de madera, en terracota: la misma tinta de las láminas de país
-    m = Image.new("L", (W, H), 0)
-    fq = madera(560)
-    ImageDraw.Draw(m).text((W - M - R + 30, T + 520), "?", font=fq, fill=255, anchor="rs")
-    estampar(img, m, TINTA, 60 + n)
     pregunta = lam["pregunta"]
     tam = 104 * lam.get("escala", 1.0)
     texto_ = lam.get("texto", "")
-    alto = alto_titular(pregunta, tam, ancho) + (28 + alto_texto(texto_, 40, ancho) if texto_ else 0)
+    mision = lam.get("mision", af.MISION)
+    if not mision or "Dial Medio" in texto_:
+        mision = ""
+    alto = (alto_titular(pregunta, tam, ancho) + (28 + alto_texto(texto_, 40, ancho) if texto_ else 0)
+            + (56 + alto_texto(mision, 32, ancho - 60) if mision else 0))
     y_pie = H - B - 150
     y = max(T + 300, y_pie - 70 - alto)
     etiqueta(img, M, y - 82, "TU OPINIÓN", fondo=PAPEL, punto=False, tam=26)
     y = dibujar_titular(img, M, y, pregunta, tam, ancho)
     if texto_:
-        texto(img, M, y + 28, texto_, 40, ancho, PAPEL + (225,))
+        y = texto(img, M, y + 28, texto_, 40, ancho, PAPEL + (225,))
+    if mision:  # tras un filete corto, más chica: la razón para seguir a Dial
+        ImageDraw.Draw(img).line([(M, y + 34), (M + 120, y + 34)], fill=TINTA, width=4)
+        texto(img, M, y + 56, mision, 32, ancho - 60, PAPEL + (200,))
     # acciones (v3): una línea en versales, sin cajas; la primera, que es la que más importa, en la tinta de la línea
     fa_ = etiqueta_f(27)
     x = M

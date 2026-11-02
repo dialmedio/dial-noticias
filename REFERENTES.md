@@ -5,7 +5,7 @@ esquivarlas: es **aprender sus técnicas y conceptos**, traducirlos a la materia
 posibilidades para todas las líneas. Cada referente deja tres cosas:
 
 1. una **ficha** aquí: qué hace, por qué funciona, cómo lo traduce Dial y cuándo usarlo (diseño y escritura);
-2. **herramientas** en el código del kit (hoy: `iluminado.py`);
+2. **herramientas** en el código del kit (hoy: `iluminado.py` de la ficha 1 y `afiche.py` de la ficha 2);
 3. una **pieza de prueba** que las usa en un tema nuestro.
 
 ## Cómo se aprende de un referente (el método, tal como quedó el 2 nov 2026)
@@ -32,6 +32,34 @@ Reglas que salen de ahí:
 - Prueba de distancia: al lado del referente se reconoce el parentesco de oficio, no la pieza.
 - Se aprende de **diseño y de escritura** a la vez: cómo conceptualiza, desde qué persona habla, en qué orden van
   emoción y dato.
+
+Hay dos maneras de hacer la pieza de prueba, y las dos enseñan:
+
+| Modo | Qué se copia | Qué es de Dial | Ejemplo |
+|---|---|---|---|
+| **Calco** (ficha 1) | Las técnicas | El tema, el texto, la ejecución | «¿Por qué ya nada nos conmueve?» |
+| **Ensayo** (ficha 2) | El ángulo, el orden del argumento y el tono | La redacción, los hechos verificados, la ejecución | «¿Cómo se le gana al algoritmo?» |
+
+El ensayo sirve para medir cómo responde el público a una estructura que ya funcionó en otra cuenta. Aun así se
+redacta con palabras propias y **se verifica cada hecho del original**: en el primero, cuatro no se sostenían.
+
+## Caja de herramientas por necesidad (todas las fichas juntas)
+
+Cada ficha suma otra manera de resolver lo mismo. Antes de inventar, mirar aquí:
+
+| Necesidad | Ficha 1 · grabado iluminado (`iluminado.py`) | Ficha 2 · afiche militante (`afiche.py`) |
+|---|---|---|
+| Marcar lo importante | `pincelada` detrás de una frase; `subrayado` de marcador bajo una cita | Franja de resaltador bajo **cada** renglón (`renglones`) y el remate en negrilla al final |
+| Personas | `persona`: fotograbado en el papel de la lámina, la prenda iluminada | `retrato`: blanco y negro de tono continuo sobre un campo de color, encima del titular |
+| Fotos de contexto | `paisaje_continuo`: una panorámica que corre por todas las láminas | `banda`: tira de copia en blanco y negro pegada abajo, con el canto rasgado |
+| Marco y ornamento | `isolineas` en una esquina; `cielo_rayado` | `anillos`: la o de pluma del aro, grande y cortada por los bordes; `disco` detrás de la persona |
+| Voces de letra | Afirma (Instrument Sans) y siente (Fraunces itálica) | Cartel (Bricolage negra estrecha, `titular`) y cuerpo con negrilla |
+| Ritmo del carrusel | Claro y oscuro: papel de día, cartulina de noche | Portada y cierre de color, el interior igual en papel; la foto se va cuando el argumento se pone serio |
+| Cierre | Cartel de junta con la cifra en aguada | Par de la portada con la misión (`l_cierre`); la `cta` de Al Aire tomó de aquí el anillo y la misión |
+| Tono | Íntimo: del duelo a lo común | Militante: del diagnóstico a la organización |
+
+Se pueden mezclar: una pieza de grabado iluminado puede cerrar con el par de portada de la ficha 2, y un ensayo puede
+llevar la pincelada en vez de la franja en una lámina que tenga que respirar.
 
 ---
 
@@ -143,3 +171,118 @@ Paisaje y texturas
 Composición
 - La portada al mismo nivel que el resto: si las demás láminas tienen paisaje y dos voces, la portada también.
 - Pincelada una o dos veces por pieza; subrayado una vez.
+
+---
+
+## Ficha 2 · @contranarrativas, «Imaginación política frente a la gobernanza algorítmica» (29 oct 2026) · aprobada
+
+Carrusel de 11 láminas, con texto de Erick Tostado, sobre cómo la campaña de Lula le ganó a la ultraderecha en las
+redes. Es un ensayo de opinión militante. La portada va en un solo color, con flores, titular de cartel y Lula
+recortado. Las diez láminas de adentro son iguales: papel crema, texto largo centrado con un resaltador amarillo bajo
+cada renglón y fotos en blanco y negro abajo. Dejó la técnica **afiche militante**. Pieza de prueba, en modo
+ensayo: `D:/AA Dialmedio/Noticias/Al Aire/2026-11-02 Imaginacion politica (ensayo)/` (`ensayo.py` + `ensayo.json`;
+`textos.md` lleva las fuentes y lo que se corrigió del original). Martín aprobó portada y cierre el 2 nov («¡Excelente!»).
+
+### Diseño
+
+| En el referente | Por qué funciona | Cómo lo hace Dial | Herramienta |
+|---|---|---|---|
+| Portada de un solo color plano, muy saturado | Detiene el dedo en el perfil; distingue la pieza de las de foto | **Campo brasa** impreso (la tinta de Al Aire), con su textura de prensa | `aa.campo(BRASA)` |
+| Círculo grande y más oscuro detrás de la persona | Le da peso a la figura y la separa del fondo sin caja | **Disco** de la misma tinta con más carga, impreso | `disco()` |
+| Flores grandes recortadas que se salen del marco | Encuadran, dan ritmo y meten una segunda y una tercera tinta | **Anillos de pluma**: la o del aro de la v5, grande, cortada por los bordes, en papel y carbón. Tinta pareja, sin veta | `anillos()`, `pluma()` |
+| Titular enorme en cartel, renglones cortados a mano | Se lee de lejos; el corte de renglón hace el ritmo | **Bricolage negra y estrecha** (la letra de texto de la marca, llevada a cartel), casi de lado a lado, interlineado apretado. Antetítulo chico arriba, en versales | `titular()`, `grotesca()` |
+| El brazo de la persona sube entre las líneas del titular | Profundidad: la figura está delante de las letras | La persona va **encima** del titular y toca apenas el último renglón, sin tapar ninguna palabra | `l_portada()` |
+| Persona recortada en blanco y negro | La cara manda sin pelear con el color | **Retrato** en blanco y negro de tono continuo, grano de película suave, borde firme, solo la figura más grande (la gente de atrás sale) | `retrato()` |
+| Resaltador amarillo bajo cada renglón | Texto largo legible en el celular: el ojo baja de franja en franja | **Franja de resaltador** brasa clara (62 % brasa, 38 % papel), impresa, una por renglón; renglones parejos, sin viudas | `renglones()`, `RESALTADOR` |
+| Una frase final en negrilla en cada lámina | El remate: lo que el lector se lleva si solo lee eso | `*así*` en el texto pone **negrilla** de la misma letra; va al final de la lámina | `renglones()` |
+| Foto en blanco y negro abajo, a todo el ancho | Contexto sin robarle protagonismo al argumento | **Banda**: tira de copia tibia, negro de película, canto de arriba rasgado | `banda()` |
+| Las fotos desaparecen cuando el argumento se pone serio | El cambio de ritmo avisa que ahora hay que leer | Láminas de solo texto en la parte de teoría, pruebas y denuncia | `l_texto()` sin `foto` |
+| Interior idéntico, logo pequeño | El carrusel se siente un solo texto | Interior **sin cabezote ni logo** (Martín, 2 nov): la marca va en portada y cierre | `l_texto()` |
+| El cierre es otra lámina de texto | (aquí Dial cambia) | **Cierre como par de la portada**: el mismo campo, disco y anillo, la pregunta en la letra del titular, un filete, la misión y la firma en carbón. Sin signo de pregunta grande | `l_cierre()`, `firma_clara()`, `MISION` |
+
+**Lo que no pasa:** el verde y el amarillo, las flores, su cursiva, el logo C/N, sus frases y la cita del paradero de
+bus, que no aparece en ninguna fuente.
+
+### Escritura y concepto
+
+| En el referente | Por qué funciona | Cómo lo usa Dial |
+|---|---|---|
+| El argumento sube un escalón por lámina: tesis, amenaza, lo que está en juego, quién gana y cómo, el mecanismo, preguntas, un pensador, el caso que responde, una cara, la prueba en otro país, la herramienta, el llamado | Cada lámina deja una deuda que paga la siguiente; por eso se lee aunque sea largo | La misma escalera, con hechos verificados. Las preguntas en el medio (lámina 5) dejan al lector en el aire antes de la teoría |
+| Primera persona plural («no perdamos de vista») | El medio habla desde adentro de la pelea | «Miremos el detalle», «lo que pensamos y lo que sentimos» |
+| Conceptos con nombre fuerte («feudalismo digital», «terratenientes de la era digital», *ragebait*) | Una palabra nueva se recuerda y se comparte | Nombrar el mecanismo con una imagen propia y explicarla en la misma frase («el anzuelo de la ira») |
+| Nombra al antagonista con nombre propio | La denuncia es concreta | Nombres, cargos y hechos: Trump, el Escudo de las Américas, Cerimedo. Lo judicial con el estado exacto («imputado por tentativa», nunca «feminicida» sin condena) y la respuesta de la defensa |
+| Un pensador que da peso (Safatle) | Saca el argumento de la pura opinión | Paráfrasis atribuida, sin comillas, si la cita textual no se encuentra |
+| De lo individual a lo colectivo: la respuesta fue gente, no bots | La salida es posible y está al alcance | Millones de cuentas reales, un canal, el barrio, «el indeciso de la casa» |
+| Una cara joven como prueba (Ana Elisa Santos) | Le pone cuerpo al argumento | Solo con lo verificado (votos, récord, amenazas); nunca una frase que no aparezca en una fuente |
+| Remate en negrilla al final de cada lámina | El ritmo de un discurso: cada lámina cierra con un golpe | Una frase corta y concreta, sin aforismo de relleno |
+| Se trae a casa | El lector se pregunta qué le toca a él | Colombia entra en la lámina de lo que está en juego y en el cierre («¿Estamos listos para dar esta pelea en Colombia?») |
+
+### La pieza, lámina por lámina (para repetir la estructura)
+
+1. **Portada** (`l_portada`): campo brasa, disco, tres anillos (papel arriba a la derecha; carbón y papel abajo a la
+   izquierda), titular de cartel en tres renglones, la persona encima, el antetítulo chico arriba.
+2. **La nueva guerra** (banda): el diagnóstico.
+3. **Lo que está en juego** (banda): los recursos, la alianza y dónde queda Colombia.
+4. **El método del otro** (banda): datos, rabia y algoritmo.
+5. **Dos preguntas** (banda).
+6. **El pensador** (solo texto).
+7. **La respuesta** (banda): el caso y el resultado, con cifras.
+8. **La cara** (solo texto).
+9. **El contramodelo** (solo texto): la prueba en otro país.
+10. **La herramienta** (solo texto).
+11. **Cierre** (`l_cierre`): la pregunta, la misión y la firma.
+
+### Cuándo usar el afiche militante
+
+- Ensayos de opinión y análisis político con argumento largo: Al Aire reflexivo, el Expediente cuando sostiene una
+  tesis, una entrega de serie que necesite argumentar.
+- Portada de color con una persona recortada cuando hay un protagonista claro y una foto que mire a cámara.
+- La franja por renglón sirve para cualquier lámina de mucho texto, en cualquier línea, con la franja en el color de
+  esa línea (`renglones(..., color=…)`).
+
+### Cómo se usa en código (el ejemplo completo es `ensayo.py` de la pieza)
+
+```python
+import afiche as af
+# por lámina, con un JSON como ensayo.json (cfg["_base"] = carpeta de la pieza)
+img = af.l_portada(cfg, lam, n)       # titulo, tam, y_titulo, bajada, disco, anillos, recorte
+img = af.l_texto(cfg, lam, n)         # texto (con *remate*), foto, desde, foco
+img = af.l_cierre(cfg, lam, n)        # pregunta, mision (por defecto af.MISION), disco, anillos
+# o las piezas sueltas sobre cualquier lámina:
+af.renglones(img, "Texto largo… *el remate.*", 110, 900)
+af.anillos(img, [{"c": [1110, 330, 200], "punta": 30, "tinta": "papel"}])
+```
+
+### Decisiones de Martín y tensiones con las máximas
+
+- Cierre sin el signo de pregunta grande, en todo Al Aire (2 nov: «no funciona muy bien»). La `cta` de `al_aire.py`
+  ya no lo lleva: un anillo de pluma brasa tenue detrás del texto y la misión debajo de la pregunta.
+- Misión en el cierre: «Dial Medio es un medio independiente y riguroso…» (`af.MISION`; la `cta` la pone por defecto).
+- Interior sin cabezote ni logo en las piezas largas (2 nov).
+- Persona en la portada, encima del titular: aprobada. Choca con la regla de portada de Al Aire («una sola foto, sin
+  recortes»); vale para ensayos con un protagonista, no para las noticias del día.
+- Pendientes de decidir: **11 láminas** (la regla dice 6), **texto largo** en cada lámina (las máximas piden poco
+  texto) y, sobre todo, **el tono militante**, que choca con la misión que se firma al final («no responde a ningún
+  partido»). El ensayo lo hizo a propósito para medir; antes de repetirlo, Martín define si Dial firma piezas de
+  opinión y cómo se marcan.
+
+### Revisión de oficio (errores ya cometidos con esta técnica)
+
+Portada
+- La persona en trama de periódico sobre el campo de color se veía sucia: va en tono continuo (`retrato`).
+- Rembg se lleva gente de atrás pegada a la figura: quedarse con la mancha más grande y apretar el borde.
+- La cursiva Fraunces como titular de cartel se ve decorativa (sus eles curvas): el cartel va en Bricolage.
+- Los anillos con la veta del tipo de madera se ven sucios: tinta pareja (`fuerza` 0.45).
+- La bajada larga debajo del titular le quita fuerza: va como antetítulo chico, arriba.
+- La persona puede tocar el último renglón, pero todas las palabras se tienen que leer.
+
+Texto
+- `str.split()` parte en el espacio duro: «51,7 %» y «47 a 45» se separaban. `tokens()` parte solo en espacios
+  normales; poner U+00A0 donde no se puede cortar.
+- Si la letra baja de 40 px en una lámina, se recorta el texto antes que achicarla.
+- Verificar el original frase por frase: citas que no aparecen en ninguna fuente, imputaciones contadas como
+  condenas, cifras redondeadas. Lo que no se sostiene no pasa.
+
+Cierre
+- El signo grande no va. Si un anillo entra en la `cta` oscura, va tenue y detrás del texto, lejos del logo de la
+  cabecera (en la primera prueba lo tocaba).
