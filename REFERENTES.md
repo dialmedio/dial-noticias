@@ -5,7 +5,7 @@ esquivarlas: es **aprender sus técnicas y conceptos**, traducirlos a la materia
 posibilidades para todas las líneas. Cada referente deja tres cosas:
 
 1. una **ficha** aquí: qué hace, por qué funciona, cómo lo traduce Dial y cuándo usarlo (diseño y escritura);
-2. **herramientas** en el código del kit (hoy: `iluminado.py` de la ficha 1 y `afiche.py` de la ficha 2);
+2. **herramientas** en el código del kit (hoy: `iluminado.py` de la ficha 1, `afiche.py` de la ficha 2 y `sello.py` de la ficha 4);
 3. una **pieza de prueba** que las usa en un tema nuestro.
 
 ## Cómo se aprende de un referente (el método, tal como quedó el 2 nov 2026)
@@ -47,16 +47,17 @@ redacta con palabras propias y **se verifica cada hecho del original**: en el pr
 
 Cada ficha suma otra manera de resolver lo mismo. Antes de inventar, mirar aquí:
 
-| Necesidad | Ficha 1 · grabado iluminado (`iluminado.py`) | Ficha 2 · afiche militante (`afiche.py`) |
-|---|---|---|
-| Marcar lo importante | `pincelada` detrás de una frase; `subrayado` de marcador bajo una cita | Franja de resaltador bajo **cada** renglón (`renglones`) y el remate en negrilla al final |
-| Personas | `persona`: fotograbado en el papel de la lámina, la prenda iluminada | `retrato`: blanco y negro de tono continuo sobre un campo de color, encima del titular |
-| Fotos de contexto | `paisaje_continuo`: una panorámica que corre por todas las láminas | `banda`: tira de copia en blanco y negro pegada abajo, con el canto rasgado |
-| Marco y ornamento | `isolineas` en una esquina; `cielo_rayado` | `anillos`: la o de pluma del aro, grande y cortada por los bordes; `disco` detrás de la persona |
-| Voces de letra | Afirma (Instrument Sans) y siente (Fraunces itálica) | Cartel (Bricolage negra estrecha, `titular`) y cuerpo con negrilla |
-| Ritmo del carrusel | Claro y oscuro: papel de día, cartulina de noche | Portada y cierre de color, el interior igual en papel; la foto se va cuando el argumento se pone serio |
-| Cierre | Cartel de junta con la cifra en aguada | Par de la portada con la misión (`l_cierre`); la `cta` de Al Aire tomó de aquí el anillo y la misión |
-| Tono | Íntimo: del duelo a lo común | Militante: del diagnóstico a la organización |
+| Necesidad | Ficha 1 · grabado iluminado (`iluminado.py`) | Ficha 2 · afiche militante (`afiche.py`) | Ficha 4 · copia quemada y sello (`sello.py`) |
+|---|---|---|---|
+| Marcar lo importante | `pincelada` detrás de una frase; `subrayado` de marcador bajo una cita | Franja de resaltador bajo **cada** renglón (`renglones`) y el remate en negrilla al final | `tampon` de brasa sobre el objeto que carga la lógica (la bota colgada); `sello` con la palabra que se le pone a la gente |
+| Personas | `persona`: fotograbado en el papel de la lámina, la prenda iluminada | `retrato`: blanco y negro de tono continuo sobre un campo de color, encima del titular | Dentro de su copia de archivo, sin recortar; la prenda en aguada solo en la portada; ni tampón ni sello sobre caras |
+| Fotos de contexto | `paisaje_continuo`: una panorámica que corre por todas las láminas | `banda`: tira de copia en blanco y negro pegada abajo, con el canto rasgado | `copia`: la foto de archivo a sangre es el fondo de la lámina, quemada donde va la letra; `abajo=` si la letra taparía una cara |
+| Citar la fuente | El nombre de la fuente en el texto | Paráfrasis atribuida | La institución y su documento en el dato (JEP, CNMH, la ley); el detalle completo en la descripción |
+| Marco y ornamento | `isolineas` en una esquina; `cielo_rayado` | `anillos`: la o de pluma del aro, grande y cortada por los bordes; `disco` detrás de la persona | Ninguno: el grano de la copia y el sello hacen la textura |
+| Voces de letra | Afirma (Instrument Sans) y siente (Fraunces itálica) | Cartel (Bricolage negra estrecha, `titular`) y cuerpo con negrilla | `tipos`: la pregunta en tipos sueltos (Fraunces suave, `opsz` 60) que bailan y siguen la foto; el dato en Instrument Sans |
+| Ritmo del carrusel | Claro y oscuro: papel de día, cartulina de noche | Portada y cierre de color, el interior igual en papel; la foto se va cuando el argumento se pone serio | Capítulos con el mismo rótulo en anáfora («Se aprende en…»); lámina espejo sin rótulo con los sellos sueltos; cierre en hueso |
+| Cierre | Cartel de junta con la cifra en aguada | Par de la portada con la misión (`l_cierre`); la `cta` de Al Aire tomó de aquí el anillo y la misión | El último término de la anáfora es lo común («Se aprende en la junta»), con una `copia` pequeña de la reunión |
+| Tono | Íntimo: del duelo a lo común | Militante: del diagnóstico a la organización | Reflexivo, todo en preguntas: de lo aprendido a lo común |
 
 Se pueden mezclar: una pieza de grabado iluminado puede cerrar con el par de portada de la ficha 2, y un ensayo puede
 llevar la pincelada en vez de la franja en una lámina que tenga que respirar.
@@ -319,3 +320,114 @@ Texto
 Cierre
 - El signo grande no va. Si un anillo entra en la `cta` oscura, va tenue y detrás del texto, lejos del logo de la
   cabecera (en la primera prueba lo tocaba).
+
+---
+
+## Ficha 4 · @aliana.luz, «Ecología de las relaciones. Lenguaje, poder y cambio social» (3 nov 2026) · aprobada
+
+Carrusel de 6 láminas sobre cómo repetimos en los vínculos la dominación que queremos cambiar; la sexta invita a un
+taller. Fotos de archivo en blanco y negro con mucho grano, la pregunta escrita a mano y enorme encima, una sola mancha
+de azul plano sobre el objeto o la cara que carga el poder, un rótulo que se repite («El lenguaje de…») y una lámina
+final clara. Martín: «está impresionante»; la pieza de prueba, «¡Excelente!» (3 nov). Dejó la técnica **copia quemada
+y sello**. Pieza de prueba: `D:/AA
+Dialmedio/Noticias/Al Aire/2026-11-03 Ecologia de las relaciones (calco)/` («¿Dónde aprendimos la guerra que queremos
+dejar atrás?»; `calco.py`, herramientas en `sello.py` del kit; `textos.md` con fuentes).
+
+### Diseño
+
+| En el referente | Por qué funciona | Cómo lo hace Dial | Herramienta |
+|---|---|---|---|
+| Fotos de archivo a sangre, gris con grano grueso | El pasado pesa: lo que se aprendió viene de lejos; todas las láminas son una sola materia | **Copia de archivo** en fotograbado sobre el hueso (archivos colombianos de dominio público: Melitón Rodríguez, el Batallón Colombia; fotos de hoy de Prensa Rural pasan por la misma copia) | `copia(foto, caja)` |
+| La letra blanca encima de la foto, siempre legible | La foto oscurecida donde va la letra, sin caja | **Quemado de cuarto oscuro**: la zona del texto recibe más luz y sale más oscura, con el borde perdido. Si la foto es apaisada y la letra taparía una cara, la foto va abajo y arriba se quema hasta el negro (`abajo=`) | `copia(..., quemar=[…], abajo=)` |
+| La pregunta escrita a mano, enorme, que se dobla con la foto | Se lee como alguien que pregunta, no como un rótulo; ocupa la lámina | **Tipos sueltos**: la pregunta en Fraunces suave compuesta letra por letra, cada una con su giro (±4°), su tamaño (±8 %) y su altura, el renglón que se dobla (`curva`), tinta de plomo con el canto comido. Renglones cortados a mano | `tipos(img, renglones, …)` |
+| Una mancha azul plana sobre lo que carga el poder (el casete en la cabeza, la carpeta del voceador, la cara de la maestra y de la operadora) | El color señala el mecanismo, no a la persona: el poder es impersonal | **Tampón de caucho** en brasa (la única tinta): plano, opaco, con la presión desigual y los poros del sello mal entintado, sobre **el objeto** (la bota colgada en la pared de la casa). Es la otra cara de la ficha 1: allá el color va en lo vivo, aquí en el mecanismo | `tampon(img, mascara)`, `mascara_oscura()` |
+| (traducción propia) | Cuando el tema es el lenguaje, el mecanismo es la palabra | **Sello de oficina** con la etiqueta que se le pone a la gente («DESECHABLE», «BAJA»), marco doble, girado, estampado sobre la pared o el papel de la foto | `sello(texto, tam, color)` |
+| Letras sueltas que salen de la boca del voceador | El sonido se ve | Los **sellos sueltos** de las láminas anteriores, juntos en la lámina del espejo | `sello()` |
+| Rótulo chico arriba, siempre igual | Ordena el carrusel como capítulos | Versales de Instrument Sans en hueso | `rotulo()` de la pieza |
+| Lámina final clara, en papel | Cambio de registro: de la pregunta a la salida | Cierre en hueso con una copia pequeña (una reunión) al lado del texto de lo común, la pregunta en itálica brasa, la misión y la firma | `copia(…, w, h, papel=…)` |
+| Firma a mano pequeña en cada lámina | Autoría sin logo | `firma()` con el aro | `firma()` |
+
+**Lo que no pasa:** el azul cobalto, la letra manuscrita y la firma a mano, las caras tapadas con mancha, sus frases
+(«el poder opera también ahí», «¿cuánto de lo que…?», «sigue hablando a través de nosotros»), Rosenberg, el priming y
+el panóptico (no se citan sin leerlos), el taller.
+
+### Escritura y concepto
+
+| En el referente | Por qué funciona | Cómo lo usa Dial |
+|---|---|---|
+| Todo en preguntas, ninguna afirmación grande | El lector se responde solo; nadie se siente acusado | Cada lámina es una pregunta; el dato verificado va abajo, chico, y la responde a medias |
+| Anáfora del rótulo («El lenguaje de la publicidad / de la educación / de la arquitectura») | Ritmo de capítulos; cada uno es un lugar donde se aprende | «Se aprende en la casa / en la calle / en el cuartel» y el último término **es la salida**: «Se aprende en la junta» |
+| Del mundo de afuera al espejo («¿qué parte… sigue hablando a través de nosotros?») | La crítica vuelve sobre quien la hace | Lámina 5 sin rótulo: «¿Cuántas de estas palabras seguimos diciendo nosotros?», con las etiquetas estampadas alrededor |
+| Primera persona plural | Habla desde adentro | «¿Dónde aprendimos…?», «Firmamos un acuerdo de paz en 2016» |
+| Mecanismo y no culpable (las caras tapadas) | Apunta a la estructura | Ningún nombre propio; las instituciones con su documento (JEP, CNMH, la ley) |
+| Teoría que da peso en la descripción | La lámina queda corta y limpia | La descripción amplía cada lámina con su fuente |
+| Termina vendiendo un taller | (aquí Dial cambia) | Lo común con ley y nombre: la comisión de convivencia y conciliación de la junta (Ley 2166, arts. 49-50), y «¿Quién arregla los líos en tu cuadra?» |
+
+### La pieza, lámina por lámina
+
+1. **Portada**: la mujer del pañuelo (Prensa Rural) mira a cámara a la derecha, el pañuelo en aguada de brasa; la
+   pregunta en tipos sueltos a la izquierda sobre la pared quemada, las dos primeras líneas en brasa clara.
+2. **Casa**: zapateros con niños a la mesa (Melitón Rodríguez, 1895); la bota colgada en tampón; el castigo físico y
+   la Ley 2089.
+3. **Calle**: el antiguo Bronx; sello «DESECHABLE» en la pared; la «limpieza social» (CNMH).
+4. **Cuartel**: el Batallón Colombia lee un papel (la foto abajo, el cielo quemado); sello «BAJA» sobre el papel; la
+   cifra de la JEP.
+5. **Espejo**: cartulina, la pregunta centrada y los cinco sellos sueltos.
+6. **Cierre**: hueso, «Se aprende en la junta», copia de una reunión, la comisión de convivencia, la pregunta, la misión.
+
+### Cómo se usa en código (el ejemplo completo es `calco.py` de la pieza)
+
+```python
+import sello as se
+img, g, im = se.copia(foto, caja, quemar=[(0, 0, 1080, 560, 0.62)], semilla=21)   # copia a sangre, quemada arriba
+img, g, im = se.copia(foto, abajo=730, quemar=[(0, 0, 1080, 690, 0.82)])          # foto apaisada: abajo, cielo negro
+gris = np.asarray(im.convert("L"), np.float32) / 255                               # sin quemar, para buscar el objeto
+se.tampon(img, se.mascara_oscura(gris, (495, 285, 630, 475), umbral=0.38), BRASA)
+se.tipos(img, ["¿Quién nos", "enseñó que", "corregir", "es pegar?"], M, 245, letra(80), HUESO, 88,
+         semilla=5, curva=[0, 0.04, 0, 0.05], tinta=None)                          # letra(): Fraunces opsz 60, SOFT 100
+s = se.sello("BAJA", 76, BRASA, giro=-4, carga=1.35)                               # carga > 1 sobre fondo claro
+img.alpha_composite(s, (cx - s.width // 2, cy - s.height // 2))
+c, _, _ = se.copia(foto, caja, w=400, h=440, papel=il.pliego(400, 440, 67))       # copia pequeña para el cierre
+```
+
+### Cuándo usarla
+
+- Temas de memoria, lenguaje, cultura y paz: Al Aire reflexivo, Arte y memoria, la serie de paz, el Expediente cuando
+  habla de estigmatización.
+- Cuando hay fotos de archivo de dominio público (Melitón Rodríguez y Benjamín de la Calle en Commons; el Batallón
+  Colombia) o fotos de hoy que aguanten la copia.
+- El sello sirve suelto en cualquier línea para mostrar una etiqueta («terrorista», «vándalo», «guerrillero de
+  civil») sin repetirla en el titular.
+
+### Decisiones de Martín y tensiones con las reglas vigentes
+
+Martín aprobó la pieza como quedó (3 nov), con estas decisiones dentro:
+- **Personas dentro de su foto**, sin recortar; las fichas 1 y 2 las recortan. Las dos maneras valen:
+  recortada cuando la persona tiene que salir del papel; dentro de su copia cuando la escena es el argumento.
+- **Color en el mecanismo**: la ficha 1 pone el color solo en lo vivo; aquí la brasa marca el mecanismo (la bota, la
+  etiqueta). Nunca sobre caras ni piel.
+- **Dato de tres o cuatro renglones** en las láminas interiores, debajo de la pregunta grande.
+- **Foto de otra época** (Batallón Colombia, Corea, 1951) para hablar del lenguaje del parte en 2002-2008, con el
+  crédito que lo dice.
+
+Sin probar: **caras tapadas** con la mancha, como hace el referente con la autoridad. Choca con la regla de no tapar
+caras; solo con permiso de Martín y sobre una foto de archivo con la autoridad de espaldas.
+
+### Revisión de oficio (errores de esta pieza)
+
+- Fraunces con `opsz` 144 tiene perfiles finísimos: con el canto comido de la tinta se partían las letras como
+  esténcil. Los tipos sueltos van en `opsz` 60 y el desgaste solo toca el canto (`4m(1-m)`), nunca el centro del trazo.
+- El baile de las letras al ±1,5° no se notaba: parecía letra normal. Va a ±4° y ±8 %, con tope.
+- La pregunta tapaba la cara del soldado al recortar a 4:5 una foto apaisada: la foto va abajo (`abajo=730`) y la
+  pregunta en el cielo quemado. Revisar cada cara contra cada renglón.
+- La pregunta tocaba la bota en tampón: los renglones se cortan cortos para que el objeto marcado respire.
+- La máscara del objeto se busca en la foto sin quemar (en la quemada, la pared oscura entra en la mancha).
+- La firma del fotógrafo en la copia («Rodríguez 1895») queda bajo el quemado de abajo.
+- El cielo rayado a media fuerza se veía como líneas de pantalla: en la lámina espejo va al 18 %.
+- Sellos sueltos: nunca uno encima de otro; dejar aire entre ellos y lejos de la firma.
+- **El sello se pierde sobre gris medio**: la brasa y el gris de la copia tienen casi el mismo valor. «BAJA» sobre la
+  mano movida del soldado no se leía; sobre los papeles blancos sí (`carga=1.35`). El sello va sobre algo muy claro
+  (papel, pared encalada) o muy oscuro (pared quemada), nunca sobre medio tono.
+- **Símbolos de partido en las fotos**: la copia del cierre traía un bolso con la cara y el nombre del Che. Dial no
+  tiene partido: revisar camisetas, bolsos, banderas y pancartas de cada foto antes de encuadrar, y recortar fuera.
+- Un dato de tres renglones dejaba una palabra sola en el último: ensanchar la caja (`ancho=920`) antes que cortar.
