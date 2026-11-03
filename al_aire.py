@@ -484,6 +484,9 @@ def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
     r.fa, r.acento = dn.cuerpo(tam, 700), PAPEL
     lin = r.equilibradas(ancho)
     asc, rects, yy = r.f.getmetrics()[0], [], y
+    # la franja sale menos de medio espacio por lado: con 10 px fijos se comía el espacio y el resaltado
+    # quedaba pegado a la palabra vecina («no.Chile ya lo hizo:desde», 3 nov 2026)
+    pad = min(10, r.f.getlength(" ") * 0.4)
     for l in lin:
         cx, base, tramo = x, yy + asc, None
         for i, tok in enumerate(l):
@@ -494,11 +497,11 @@ def texto(img, x, y, contenido, tam, ancho, color, peso=500, inter=1.2):
                 if ac:
                     tramo = [cx, cx + fw] if tramo is None else [tramo[0], cx + fw]
                 elif tramo:
-                    rects.append((tramo[0] - 10, base - tam * 0.92, tramo[1] + 10, base + tam * 0.3))
+                    rects.append((tramo[0] - pad, base - tam * 0.92, tramo[1] + pad, base + tam * 0.3))
                     tramo = None
                 cx += fw
         if tramo:
-            rects.append((tramo[0] - 10, base - tam * 0.92, tramo[1] + 10, base + tam * 0.3))
+            rects.append((tramo[0] - pad, base - tam * 0.92, tramo[1] + pad, base + tam * 0.3))
         yy += r.alto_linea
     mt.franja(img, rects, CARBON, int(x + y) % 997)
     return r.dibujar(ImageDraw.Draw(img), x, y, lin)
