@@ -61,6 +61,38 @@ Cada ficha suma otra manera de resolver lo mismo. Antes de inventar, mirar aquí
 Se pueden mezclar: una pieza de grabado iluminado puede cerrar con el par de portada de la ficha 2, y un ensayo puede
 llevar la pincelada en vez de la franja en una lámina que tenga que respirar.
 
+### La mezcla, probada y aprobada (3 nov 2026)
+
+«¿Dónde se le llevan flores a un desaparecido?» (Día de Difuntos, `D:/AA Dialmedio/Noticias/Al Aire/2026-11-02
+Difuntos sin tumba/`, `difuntos.py`) es la primera pieza con las dos fichas. Martín aprobó el enfoque y casi todo el
+diseño: «sensible, poético… aporta una reflexión humanizante, empática y artística, desde el rigor de los datos».
+
+| Lámina | Ficha | Qué hace |
+|---|---|---|
+| 1 Portada | 1 | La pregunta a todo el ancho en dos voces con pincelada; la madre (fotograbado) sale del paisaje a la izquierda y mira a cámara; bajada corta a su lado, sin tocar la cara |
+| 2 El golpe | 1 | Hoja rasgada: el rito de los cementerios y la falta, con subrayado; el sentir en itálica añil |
+| 3 Noche | 1 | El caso que prueba (La Escombrera): los hechos en palo seco y la consigna de ellas en brasa clara |
+| 4 Día | 1 | Lista-poema de cifras, la última línea cambia de escala hacia lo político; las botas con rosas, color solo en lo rojo |
+| 5 El argumento | 2 | Papel de prensa, franja por renglón, versión del Gobierno, remate; la foto real del lugar como tira de copia |
+| 6 Cierre | 2 | `l_cierre` con `"fondo": "papel"`: la pregunta, la misión y la firma en el hueso de siempre |
+
+El orden que funcionó: emoción → caso con nombre de lugar → cifras → decisión política con la respuesta oficial →
+pregunta. El cambio de técnica en la lámina 5 avisa que ahora hay que leer.
+
+Decisiones de Martín en esta pieza:
+- El cierre de una pieza iluminada va en **hueso**, no en el campo naranja (`l_cierre(..., fondo="papel")`: sin disco,
+  anillo de pluma brasa tenue, COMENTA en brasa).
+- El paisaje continuo no necesita agua: la montaña y el barrio bastan (`agua=None`).
+
+Herramientas que dejó (en el kit):
+- `iluminado.horizonte_nublado` y `paisaje_continuo(..., cielo="nublado")`: cielos grises sin azul.
+  `iluminado.sin_cables(foto, 7, [(x0, x1, 15)])` borra los cables de la luz antes del grabado.
+- `persona(..., claro_umbral=0.78, claro_suave=30)`: pelo castaño al viento contra cielo blanco. Solo sale el cielo
+  muy claro entre los mechones y el borde de la zona no deja corte (el umbral de 0.32 se comía el pelo iluminado).
+- **Objetos con detalle fino en fotograbado**: las rosas en buril se volvían manchas pardas. `persona()` sirve para
+  objetos si se le da una máscara de u2net general en `cache` (la de personas no ve objetos), con `tinte="rojo"` y un
+  `color` más claro que la brasa (232, 98, 58) para que el rojo no se vea café sobre el tono oscuro.
+
 ---
 
 ## Ficha 1 · @ecologiasensible, «crisis de sensibilidad» (24 oct 2026) · aprobada
@@ -261,10 +293,11 @@ af.anillos(img, [{"c": [1110, 330, 200], "punta": 30, "tinta": "papel"}])
 - Interior sin cabezote ni logo en las piezas largas (2 nov).
 - Persona en la portada, encima del titular: aprobada. Choca con la regla de portada de Al Aire («una sola foto, sin
   recortes»); vale para ensayos con un protagonista, no para las noticias del día.
-- Pendientes de decidir: **11 láminas** (la regla dice 6), **texto largo** en cada lámina (las máximas piden poco
-  texto) y, sobre todo, **el tono militante**, que choca con la misión que se firma al final («no responde a ningún
-  partido»). El ensayo lo hizo a propósito para medir; antes de repetirlo, Martín define si Dial firma piezas de
-  opinión y cómo se marcan.
+- Pendientes de decidir: **11 láminas** (la regla dice 6) y **texto largo** en cada lámina (las máximas piden poco
+  texto).
+- **El tono, resuelto por Martín (2 nov 2026):** Dial no es de medias tintas. Es independiente de los partidos y
+  riguroso con los datos, pero su corazón está con la gente y la tierra, y no lo esconde. La franja del afiche sirve
+  para denuncia sobria con la versión oficial incluida (lámina 5 de «Difuntos»), no para arenga.
 
 ### Revisión de oficio (errores ya cometidos con esta técnica)
 

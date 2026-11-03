@@ -354,6 +354,35 @@ def horizonte(foto, umbral_azul=0.08, apertura=81, alto_max=0.6, suavizado=12):
     return np.clip(yy - filo[None, :] + 0.5, 0, 1), filo
 
 
+def horizonte_nublado(foto, apertura=241, suavizado=31, **_):
+    """Como horizonte(), para cielos grises sin azul (Medellín, 2 nov 2026): la tierra es lo verde o lo oscuro en
+    tramos de 13 px seguidos, así los cables de la luz no cuentan como tierra."""
+    from numpy.lib.stride_tricks import sliding_window_view as ventanas
+    a = np.asarray(foto.convert("RGB"), np.float32) / 255
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    L = 0.3 * r + 0.59 * g + 0.11 * b
+    tierra = (L < 0.42) | ((g > b + 0.02) & (g >= r - 0.01) & (L < 0.6))
+    h, w = L.shape
+    cs = np.vstack([np.zeros((1, w)), np.cumsum(tierra, 0)])
+    filo = np.argmax((cs[14:] - cs[:-14]) >= 13, axis=0).astype(np.float32)
+    filo = np.median(ventanas(np.pad(filo, apertura // 2, mode="edge"), apertura), 1)
+    s = max(3, suavizado) | 1
+    filo = ventanas(np.pad(filo, s // 2, mode="edge"), s).mean(1)
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    return np.clip(yy - filo[None, :] + 0.5, 0, 1), filo
+
+
+def sin_cables(foto, tam=7, zonas=()):
+    """Borra los cables de la luz (líneas oscuras finas) con un cierre de grises; zonas: [(x0, x1, tam)] para
+    cables más gruesos en una franja."""
+    from scipy import ndimage
+    a = np.asarray(foto.convert("RGB"), np.uint8).copy()
+    a = np.dstack([ndimage.grey_closing(a[..., c], size=(tam, tam)) for c in range(3)])
+    for x0, x1, t in zonas:
+        a[:, x0:x1] = np.dstack([ndimage.grey_closing(a[:, x0:x1, c], size=(t, t)) for c in range(3)])
+    return Image.fromarray(a)
+
+
 _SESIONES = {}
 
 
@@ -492,12 +521,13 @@ def _agua_bajo_orilla(L, filo, fondo_max):
 
 
 def paisaje_continuo(foto, n, ancho=1080, alto=600, recorte=None, agua="orilla", cache=None, semilla=2,
-                     color_agua=ANIL, cielo_umbral=0.08):
+                     color_agua=ANIL, cielo_umbral=0.08, cielo="azul"):
     """Un paisaje panorámico de n láminas de ancho, en grabado de buril, sin cielo y con el agua en aguada.
     Devuelve (día, noche): RGBA de (n*ancho, alto), papel hueso con tinta sepia y cartulina con tinta clara.
     Cada lámina i (desde 1) toma su tramo con .crop(((i-1)*ancho, 0, i*ancho, alto)) y lo pega abajo.
 
     agua: "orilla" (laguna o río: todo bajo la orilla), None (sin agua) o una máscara 0-1 propia.
+    cielo: "azul" o "nublado" (horizonte_nublado: nube gris sin azul; pasar antes la foto por sin_cables).
     cache: carpeta donde guardar los dos PNG (el cálculo tarda)."""
     if cache:
         cd, cn = Path(cache) / "paisaje-dia.png", Path(cache) / "paisaje-noche.png"
@@ -508,7 +538,10 @@ def paisaje_continuo(foto, n, ancho=1080, alto=600, recorte=None, agua="orilla",
     if recorte:
         im = im.crop(recorte)
     im = im.resize((TW, TH), Image.LANCZOS)
-    alfa, filo = horizonte(im, umbral_azul=cielo_umbral, alto_max=0.7, apertura=181, suavizado=31)
+    if cielo == "nublado":
+        alfa, filo = horizonte_nublado(im)
+    else:
+        alfa, filo = horizonte(im, umbral_azul=cielo_umbral, alto_max=0.7, apertura=181, suavizado=31)
     a = np.asarray(im, np.float32) / 255
     L = 0.3 * a[..., 0] + 0.59 * a[..., 1] + 0.11 * a[..., 2]
     if isinstance(agua, str):
@@ -566,7 +599,7 @@ def _prenda(foto, tono, umbral):
 
 
 def persona(foto, alto, papel, cache=None, caja=None, hasta=None, quitar=(), claro=(), tinte="rojo", umbral=0.3,
-            color=None, semilla=1):
+            color=None, semilla=1, claro_umbral=0.32, claro_suave=0):
     """Una persona para sacarla del paisaje, en fotograbado y sin delineado. Devuelve la capa RGBA (ancho, alto);
     se pega con el pie en el borde de abajo de la lámina. Aprobado por Martín el 2 nov 2026.
 
@@ -575,6 +608,9 @@ def persona(foto, alto, papel, cache=None, caja=None, hasta=None, quitar=(), cla
       encuadre, rembg recalcula y puede pegar manchas del fondo).
     quitar: polígonos (coordenadas del encuadre) de otras personas pegadas; seguir la línea del hombro.
     claro: polígonos donde el fondo claro se coló entre mechones: ahí se quita lo claro y queda el pelo oscuro.
+    claro_umbral: luz desde la que se quita (0.32 para pelo negro; ~0.7 si el pelo es castaño al sol y el fondo
+      es cielo blanco: así solo sale el cielo entre los mechones). claro_suave: desenfoque (px) del borde de esas
+      zonas, para que no quede un corte donde termina el polígono.
     tinte: la prenda de ese color se ilumina con aguada (color, por defecto la brasa); nunca la piel. None: sin color."""
     foto = foto.convert("RGB")
     if caja:
@@ -591,8 +627,10 @@ def persona(foto, alto, papel, cache=None, caja=None, hasta=None, quitar=(), cla
         zona = Image.new("L", m.size, 0)
         for pol in claro:
             ImageDraw.Draw(zona).polygon(pol, fill=255)
+        if claro_suave:
+            zona = zona.filter(ImageFilter.GaussianBlur(claro_suave))
         L = np.asarray(foto.convert("L"), np.float32) / 255
-        luz = np.clip((L - 0.32) * 6, 0, 1) * (np.asarray(zona, np.float32) / 255)
+        luz = np.clip((L - claro_umbral) * 6, 0, 1) * (np.asarray(zona, np.float32) / 255)
         m = Image.fromarray((np.asarray(m, np.float32) * (1 - luz)).astype(np.uint8))
     tela = Image.fromarray((_prenda(foto, tinte, umbral) * 255).astype(np.uint8)) if tinte else None
     m = _una_figura(m)

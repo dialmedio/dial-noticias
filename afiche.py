@@ -308,9 +308,13 @@ def l_cierre(cfg, lam, n):
     """Cierre como par de la portada (aprobado el 2 nov 2026): el mismo campo, disco y anillo, la pregunta en la
     letra del titular, un filete, la misión de Dial y la firma. Sin el signo de pregunta grande.
 
-    Campos: pregunta (renglones con \\n), tam, mision (por defecto MISION), ancho_mision, disco, anillos, cuenta."""
-    img = aa.campo(BRASA, 40 + n)
-    disco(img, lam["disco"], BRASA_HONDA, n)
+    Campos: pregunta (renglones con \\n), tam, mision (por defecto MISION), ancho_mision, disco, anillos, cuenta,
+    fondo: "brasa" (el par de color de la portada) o "papel" (Martín, 3 nov 2026: en una pieza de grabado iluminado
+    el cierre va en el hueso de siempre, no en naranja; sin disco, el anillo en brasa tenue y COMENTA en brasa)."""
+    papel = lam.get("fondo", "brasa") == "papel"
+    img = aa.campo(PAPEL if papel else BRASA, 40 + n)
+    if not papel:
+        disco(img, lam["disco"], BRASA_HONDA, n)
     anillos(img, lam.get("anillos", []), n)
     aa.cabecera(img, "CONVERSEMOS", oscuro=False, sobre_foto=False)
     x, y = aa.M, aa.T + 190
@@ -322,7 +326,7 @@ def l_cierre(cfg, lam, n):
     fm = dn.cuerpo(36, 540)
     for k, l in enumerate(aa.partir(lam.get("mision", MISION), fm, lam.get("ancho_mision", 720))):
         d.text((x, y + 70 + k * 50), l, font=fm, fill=CARBON, anchor="ls")
-    firma_clara(img, x, aa.H - aa.B - 120, cuenta=lam.get("cuenta", "@dialmedio"))
+    firma_clara(img, x, aa.H - aa.B - 120, primera=BRASA if papel else PAPEL, cuenta=lam.get("cuenta", "@dialmedio"))
     return img
 
 
